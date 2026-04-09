@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import InputField from '../components/InputField'
@@ -137,6 +138,19 @@ function Login() {
                 Login
               </Button>
             </form>
+
+            <div className="mt-6">
+              <AdvancedFeatureCard
+                title="Advanced Access"
+                description="Secure and role-aware login experience."
+                points={[
+                  'Role-based authentication flow for admin and student users.',
+                  'Password visibility toggle for better input control.',
+                  'Contextual credential guidance for faster onboarding.',
+                ]}
+                tone="medium"
+              />
+            </div>
           </section>
         </Card>
       </div>

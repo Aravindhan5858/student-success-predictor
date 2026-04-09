@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import FormInput from '../components/FormInput'
@@ -96,6 +97,19 @@ function AddStudent() {
           </div>
         </form>
       </Card>
+
+      <div className="mt-6">
+        <AdvancedFeatureCard
+          title="Advanced Onboarding"
+          description="Improve data quality during student profile creation."
+          points={[
+            'Standardize numeric inputs for attendance, marks, and interaction.',
+            'Use generated credentials for secure first-time student login.',
+            'Capture complete baseline data before running prediction workflows.',
+          ]}
+          tone="medium"
+        />
+      </div>
     </div>
   )
 }

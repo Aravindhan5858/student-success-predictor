@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import FormInput from '../components/FormInput'
@@ -81,6 +82,19 @@ function EditStudent() {
           </div>
         </form>
       </Card>
+
+      <div className="mt-6">
+        <AdvancedFeatureCard
+          title="Advanced Editing"
+          description="Keep student records reliable for model consistency."
+          points={[
+            'Update attendance and marks together to maintain realistic academic trends.',
+            'Review interaction score adjustments before saving profile changes.',
+            'Apply targeted edits to improve next prediction cycle quality.',
+          ]}
+          tone="medium"
+        />
+      </div>
     </div>
   )
 }

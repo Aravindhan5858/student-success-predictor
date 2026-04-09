@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -56,6 +57,17 @@ function StudentDashboard() {
           </Link>
         </div>
       </Card>
+
+      <AdvancedFeatureCard
+        title="Advanced Self-Tracking"
+        description="Monitor your progress with focused and actionable study indicators."
+        points={[
+          'Compare predicted score with attendance to identify consistency gaps.',
+          'Track interaction score to improve classroom engagement.',
+          'Review details page regularly for complete academic trend context.',
+        ]}
+        tone="low"
+      />
     </div>
   )
 }

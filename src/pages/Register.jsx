@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import InputField from '../components/InputField'
@@ -99,6 +100,19 @@ function Register() {
               Login
             </Link>
           </p>
+
+          <div className="mt-6">
+            <AdvancedFeatureCard
+              title="Advanced Registration"
+              description="Improved account setup quality for better platform security."
+              points={[
+                'Real-time password confirmation validation during signup.',
+                'Centralized registration logic through app context rules.',
+                'Seamless redirect to login after successful account creation.',
+              ]}
+              tone="medium"
+            />
+          </div>
         </Card>
       </div>
     </main>
