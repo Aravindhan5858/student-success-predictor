@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -82,7 +81,7 @@ function ModelTraining() {
       <Card className="p-6 sm:p-8">
         <h2 className="text-2xl font-bold text-slate-900">Model Training</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Configure training options and run advanced model tuning for better prediction performance.
+          Configure training options and run model tuning for better prediction performance.
         </p>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2">
@@ -121,7 +120,7 @@ function ModelTraining() {
         </div>
 
         <Card className="mt-6 border border-slate-200 p-4 shadow-none">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Advanced Features</h3>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Training Features</h3>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">Cross-Validation Folds</label>
@@ -231,19 +230,6 @@ function ModelTraining() {
               </div>
             </Card>
           </div>
-        </div>
-
-        <div className="mt-6">
-          <AdvancedFeatureCard
-            title="Advanced Training Workflow"
-            description="Operational controls for reproducible and high-quality model runs."
-            points={[
-              'Hyperparameter tuning with class-weight strategies for imbalanced data.',
-              'Cross-validation and early stopping to reduce overfitting risk.',
-              'Live training status and metric tracking for model reliability checks.',
-            ]}
-            tone="high"
-          />
         </div>
       </Card>
     </div>

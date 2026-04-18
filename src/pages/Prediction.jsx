@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -104,17 +103,6 @@ function Prediction() {
         </div>
       </Card>
       </div>
-
-      <AdvancedFeatureCard
-        title="Advanced Prediction"
-        description="Improve decision quality using richer prediction context."
-        points={[
-          'Confidence score highlights reliability of generated output.',
-          'Weighted scoring blends attendance, marks, and classroom interaction.',
-          'Risk stratification supports targeted intervention planning.',
-        ]}
-        tone="medium"
-      />
     </div>
   )
 }

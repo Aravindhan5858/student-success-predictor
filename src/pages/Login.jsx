@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import InputField from '../components/InputField'
@@ -9,6 +8,7 @@ import { useAppContext } from '../context/AppContext'
 function Login() {
   const [loginType, setLoginType] = useState('admin')
   const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [form, setForm] = useState({ username: '', password: '' })
   const [error, setError] = useState('')
   const navigate = useNavigate()
@@ -18,11 +18,16 @@ function Login() {
     setForm((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
 
-    const result = loginUser({
+    if (!rememberMe) {
+      setError('Please select Remember Me to continue')
+      return
+    }
+
+    const result = await loginUser({
       username: form.username.trim(),
       password: form.password,
       loginType,
@@ -84,18 +89,6 @@ function Login() {
               </button>
             </div>
 
-            {loginType === 'admin' ? (
-              <p className="mt-3 rounded-xl bg-indigo-50 px-3 py-2 text-xs text-indigo-700">
-                Username: <span className="font-semibold">admin</span> / Password:{' '}
-                <span className="font-semibold">admin123</span>
-              </p>
-            ) : (
-              <p className="mt-3 rounded-xl bg-cyan-50 px-3 py-2 text-xs text-cyan-700">
-                Student username = student name (ex: <span className="font-semibold">Aarav Patel</span>) and password =
-                studentname + birthyear (ex: <span className="font-semibold">aaravpatel2005</span>)
-              </p>
-            )}
-
             <form className="mt-6 space-y-1" onSubmit={handleSubmit}>
               <InputField
                 id="username"
@@ -128,6 +121,11 @@ function Login() {
                 <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
                   <input
                     type="checkbox"
+                    checked={rememberMe}
+                    onChange={(event) => {
+                      setRememberMe(event.target.checked)
+                      setError('')
+                    }}
                     className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                   />
                   Remember Me
@@ -138,19 +136,6 @@ function Login() {
                 Login
               </Button>
             </form>
-
-            <div className="mt-6">
-              <AdvancedFeatureCard
-                title="Advanced Access"
-                description="Secure and role-aware login experience."
-                points={[
-                  'Role-based authentication flow for admin and student users.',
-                  'Password visibility toggle for better input control.',
-                  'Contextual credential guidance for faster onboarding.',
-                ]}
-                tone="medium"
-              />
-            </div>
           </section>
         </Card>
       </div>

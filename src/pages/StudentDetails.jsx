@@ -1,5 +1,4 @@
 import { useParams, Link, Navigate } from 'react-router-dom'
-import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -67,17 +66,6 @@ function StudentDetails() {
           <ProgressBar value={student.predictedScore} label="Predicted Performance" />
         </div>
       </Card>
-
-      <AdvancedFeatureCard
-        title="Advanced Student Insight"
-        description="Use individual-level indicators to prioritize interventions faster."
-        points={[
-          'Focus remediation when marks and attendance move in opposite directions.',
-          'Track interaction trends to detect hidden engagement risks.',
-          'Align counselor follow-up with predicted performance score bands.',
-        ]}
-        tone="medium"
-      />
     </div>
   )
 }

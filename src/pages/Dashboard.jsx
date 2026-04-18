@@ -1,7 +1,6 @@
 import Card from '../components/Card'
 import ChartContainer from '../components/ChartContainer'
 import Badge from '../components/Badge'
-import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import { performanceDistribution, recentActivities } from '../data/mockData'
 import { useAppContext } from '../context/AppContext'
 
@@ -63,17 +62,6 @@ function Dashboard() {
           </div>
         </Card>
       </section>
-
-      <AdvancedFeatureCard
-        title="Advanced Insights"
-        description="Use strategic controls for stronger intervention planning."
-        points={[
-          'Risk trend tracking for early warning signals.',
-          'Custom KPI watchlist for attendance and marks drop-offs.',
-          'Action prioritization based on high-risk student count.',
-        ]}
-        tone="medium"
-      />
     </div>
   )
 }

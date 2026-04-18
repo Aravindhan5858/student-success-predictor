@@ -1,5 +1,4 @@
 import Badge from '../components/Badge'
-import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Card from '../components/Card'
 import ProgressBar from '../components/ProgressBar'
 import { evaluationMetrics, modelComparison } from '../data/mockData'
@@ -58,17 +57,6 @@ function Evaluation() {
           </div>
         </Card>
       </section>
-
-      <AdvancedFeatureCard
-        title="Advanced Evaluation"
-        description="Model validation workflows for more reliable deployment decisions."
-        points={[
-          'Compare model precision and recall before selecting production model.',
-          'Track high-risk cohorts and trigger focused remediation plans.',
-          'Use threshold tuning experiments to reduce false alerts.',
-        ]}
-        tone="high"
-      />
     </div>
   )
 }

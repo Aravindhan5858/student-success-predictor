@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
-import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import FormInput from '../components/FormInput'
@@ -29,9 +28,9 @@ function EditStudent() {
     setForm((prev) => ({ ...prev, [field]: event.target.value }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    updateStudent(student.id, form)
+    await updateStudent(student.id, form)
     navigate('/students')
   }
 
@@ -83,18 +82,6 @@ function EditStudent() {
         </form>
       </Card>
 
-      <div className="mt-6">
-        <AdvancedFeatureCard
-          title="Advanced Editing"
-          description="Keep student records reliable for model consistency."
-          points={[
-            'Update attendance and marks together to maintain realistic academic trends.',
-            'Review interaction score adjustments before saving profile changes.',
-            'Apply targeted edits to improve next prediction cycle quality.',
-          ]}
-          tone="medium"
-        />
-      </div>
     </div>
   )
 }

@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import AdvancedFeatureCard from '../components/AdvancedFeatureCard'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -110,18 +109,6 @@ function Students() {
           </Button>
         </div>
       </Card>
-
-      <AdvancedFeatureCard
-        title="Advanced Student Management"
-        description="Boost monitoring quality with smarter list operations."
-        points={[
-          'Segment-based review using search, risk filter, and pagination.',
-          'One-click PDF export for filtered student cohorts.',
-          'Prioritize edit actions for high-risk profile updates.',
-        ]}
-        tone="medium"
-      />
-
       <Table headers={['Name', 'Attendance', 'Marks', 'Interaction Score', 'Risk Level', 'Actions']}>
         {pagedStudents.map((student) => (
           <tr key={student.id} className="hover:bg-slate-50">
@@ -142,7 +129,9 @@ function Students() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => deleteStudent(student.id)}
+                  onClick={async () => {
+                    await deleteStudent(student.id)
+                  }}
                   className="text-sm font-medium text-rose-600 hover:text-rose-700"
                 >
                   Delete
