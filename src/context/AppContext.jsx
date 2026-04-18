@@ -744,6 +744,18 @@ export function AppProvider({ children }) {
     }
   }, [currentStudent?.id])
 
+  useEffect(() => {
+    if (!currentStudent?.id || currentUser?.role !== 'student') {
+      return undefined
+    }
+
+    const intervalId = setInterval(() => {
+      loadStudentWorkflowRequests(String(currentStudent.id))
+    }, 10000)
+
+    return () => clearInterval(intervalId)
+  }, [currentStudent?.id, currentUser?.role])
+
   const studentWorkflowRequests = useMemo(() => {
     if (!currentStudent?.id) {
       return []

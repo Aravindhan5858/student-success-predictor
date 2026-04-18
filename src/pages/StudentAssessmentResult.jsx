@@ -1,10 +1,17 @@
+import { useEffect } from 'react'
 import Badge from '../components/Badge'
 import Card from '../components/Card'
 import Table from '../components/Table'
 import { useAppContext } from '../context/AppContext'
 
 function StudentAssessmentResult() {
-  const { studentAssessmentRequests } = useAppContext()
+  const { currentStudent, studentAssessmentRequests, loadStudentWorkflowRequests } = useAppContext()
+
+  useEffect(() => {
+    if (currentStudent?.id) {
+      loadStudentWorkflowRequests(String(currentStudent.id))
+    }
+  }, [currentStudent?.id])
 
   const publishedResults = studentAssessmentRequests.filter(
     (request) => request.status === 'Published' && Number(request?.result?.percentage || 0) >= 0,

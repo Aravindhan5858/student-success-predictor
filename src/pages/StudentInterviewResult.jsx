@@ -1,13 +1,20 @@
+import { useEffect } from 'react'
 import Badge from '../components/Badge'
 import Card from '../components/Card'
 import Table from '../components/Table'
 import { useAppContext } from '../context/AppContext'
 
 function StudentInterviewResult() {
-  const { studentInterviewRequests } = useAppContext()
+  const { currentStudent, studentInterviewRequests, loadStudentWorkflowRequests } = useAppContext()
+
+  useEffect(() => {
+    if (currentStudent?.id) {
+      loadStudentWorkflowRequests(String(currentStudent.id))
+    }
+  }, [currentStudent?.id])
 
   const publishedResults = studentInterviewRequests.filter(
-    (request) => request.status === 'Published' && Number(request?.result?.overallScore || 0) > 0,
+    (request) => request.status === 'Published' && request.type === 'interview',
   )
 
   return (

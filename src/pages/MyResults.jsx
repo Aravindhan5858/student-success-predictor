@@ -4,32 +4,73 @@ import Table from '../components/Table'
 import { useAppContext } from '../context/AppContext'
 
 function MyResults() {
-  const { assessmentResults } = useAppContext()
+  const { assessmentResults, studentAssessmentRequests, studentInterviewRequests } = useAppContext()
+
+  const publishedAssessmentResults = studentAssessmentRequests.filter(
+    (request) => request.type === 'assessment' && request.status === 'Published',
+  )
+
+  const publishedInterviewResults = studentInterviewRequests.filter(
+    (request) => request.type === 'interview' && request.status === 'Published',
+  )
 
   return (
     <div className="space-y-6">
       <section className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold text-slate-900">My Results</h2>
-        <p className="text-sm text-slate-500">Review your latest assessment outcomes.</p>
+        <p className="text-sm text-slate-500">Review your published assessment and interview outcomes.</p>
       </section>
 
-      <Table headers={['Assessment ID', 'Score', 'Percentage', 'Status', 'Submitted At']}>
-        {assessmentResults.map((result) => (
-          <tr key={result._id} className="hover:bg-slate-50">
-            <td className="px-4 py-4 font-medium text-slate-900">{result.assessmentId}</td>
-            <td className="px-4 py-4 text-slate-600">{result.score}</td>
-            <td className="px-4 py-4 text-slate-600">{result.percentage}%</td>
-            <td className="px-4 py-4">
-              <Badge tone={result.status === 'Passed' ? 'low' : 'high'}>{result.status}</Badge>
-            </td>
-            <td className="px-4 py-4 text-slate-600">{new Date(result.createdAt).toLocaleString()}</td>
-          </tr>
-        ))}
-      </Table>
+      <Card className="p-5">
+        <h3 className="mb-4 text-lg font-semibold text-slate-900">Assessment Results</h3>
+        <Table headers={['Assessment', 'Score', 'Percentage', 'Status', 'Published At']}>
+          {(publishedAssessmentResults.length ? publishedAssessmentResults : assessmentResults).map((result) => (
+            <tr key={result._id} className="hover:bg-slate-50">
+              <td className="px-4 py-4 font-medium text-slate-900">{result.title || result.assessmentId}</td>
+              <td className="px-4 py-4 text-slate-600">{result.result?.score ?? result.score ?? 0}</td>
+              <td className="px-4 py-4 text-slate-600">{result.result?.percentage ?? result.percentage ?? 0}%</td>
+              <td className="px-4 py-4">
+                <Badge tone={String(result.result?.status || result.status || '').toLowerCase() === 'pass' || result.status === 'Passed' ? 'low' : 'high'}>
+                  {result.result?.status || result.status || 'Published'}
+                </Badge>
+              </td>
+              <td className="px-4 py-4 text-slate-600">
+                {result.result?.publishedAt
+                  ? new Date(result.result.publishedAt).toLocaleString()
+                  : result.createdAt
+                    ? new Date(result.createdAt).toLocaleString()
+                    : '-'}
+              </td>
+            </tr>
+          ))}
+        </Table>
 
-      {!assessmentResults.length ? (
-        <Card className="p-6 text-center text-sm text-slate-500">No assessment results available yet.</Card>
-      ) : null}
+        {!publishedAssessmentResults.length && !assessmentResults.length ? (
+          <Card className="mt-4 p-6 text-center text-sm text-slate-500">No assessment results available yet.</Card>
+        ) : null}
+      </Card>
+
+      <Card className="p-5">
+        <h3 className="mb-4 text-lg font-semibold text-slate-900">Interview Results</h3>
+        <Table headers={['Type', 'Technical', 'Communication', 'Confidence', 'Overall', 'Status']}>
+          {publishedInterviewResults.map((result) => (
+            <tr key={result._id} className="hover:bg-slate-50">
+              <td className="px-4 py-4 font-medium text-slate-900">{result.interviewType || 'Technical'}</td>
+              <td className="px-4 py-4 text-slate-600">{result.result?.technicalScore ?? 0}</td>
+              <td className="px-4 py-4 text-slate-600">{result.result?.communication ?? 0}</td>
+              <td className="px-4 py-4 text-slate-600">{result.result?.confidence ?? 0}</td>
+              <td className="px-4 py-4 font-semibold text-slate-900">{result.result?.overallScore ?? 0}%</td>
+              <td className="px-4 py-4">
+                <Badge tone="low">{result.status}</Badge>
+              </td>
+            </tr>
+          ))}
+        </Table>
+
+        {!publishedInterviewResults.length ? (
+          <Card className="mt-4 p-6 text-center text-sm text-slate-500">No interview results available yet.</Card>
+        ) : null}
+      </Card>
     </div>
   )
 }

@@ -247,7 +247,7 @@ function App() {
           path="/student/interview-result"
           element={
             <RoleRoute allowedRoles={['student']}>
-              <Navigate to="/student/interviews" replace />
+              <StudentInterviewResult />
             </RoleRoute>
           }
         />
@@ -271,7 +271,15 @@ function App() {
           path="/student/assessment-result"
           element={
             <RoleRoute allowedRoles={['student']}>
-              <Navigate to="/student/assessments" replace />
+              <StudentAssessmentResult />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/assessment-result"
+          element={
+            <RoleRoute allowedRoles={['student']}>
+              <Navigate to="/student/assessment-result" replace />
             </RoleRoute>
           }
         />
@@ -328,6 +336,14 @@ function App() {
           element={
             <RoleRoute allowedRoles={['student']}>
               <MyRequests />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/my-request"
+          element={
+            <RoleRoute allowedRoles={['student']}>
+              <Navigate to="/my-requests" replace />
             </RoleRoute>
           }
         />

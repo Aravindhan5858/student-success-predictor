@@ -33,7 +33,7 @@ function Sidebar({ open, onClose }) {
       ? adminNavItems
       : [
           studentNavItems[0],
-          { label: 'My Details', to: currentStudent ? `/student/${currentStudent.id}` : '/student-dashboard' },
+          ...(currentStudent ? [{ label: 'My Details', to: `/student/${currentStudent.id}` }] : []),
           studentNavItems[2],
           studentNavItems[3],
           studentNavItems[4],
@@ -70,6 +70,7 @@ function Sidebar({ open, onClose }) {
             <NavLink
               key={item.label}
               to={item.to}
+              end
               onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition duration-300 hover:bg-white/10 hover:scale-[1.02] ${

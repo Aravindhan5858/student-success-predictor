@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
@@ -6,7 +7,13 @@ import Table from '../components/Table'
 import { useAppContext } from '../context/AppContext'
 
 function StudentAssessments() {
-  const { studentAssessmentRequests, updateWorkflowRequestStatus } = useAppContext()
+  const { currentStudent, studentAssessmentRequests, updateWorkflowRequestStatus, loadStudentWorkflowRequests } = useAppContext()
+
+  useEffect(() => {
+    if (currentStudent?.id) {
+      loadStudentWorkflowRequests(String(currentStudent.id))
+    }
+  }, [currentStudent?.id])
 
   return (
     <div className="space-y-6">
