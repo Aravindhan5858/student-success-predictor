@@ -45,11 +45,11 @@ function Register() {
   }
 
   return (
-    <main className="min-h-dvh bg-gradient-to-br from-indigo-100 via-sky-50 to-slate-100 p-4 sm:p-6">
+    <main className="min-h-dvh bg-gradient-to-br from-[#0b0f1a] via-[#1a0f2e] to-[#0b0f1a] p-4 sm:p-6">
       <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-xl items-center sm:min-h-[calc(100dvh-3rem)]">
         <Card className="w-full p-6 sm:p-8">
           <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Create Account</h1>
-          <p className="mt-1 text-sm text-slate-500">Sign up with your details below</p>
+          <p className="mt-1 text-sm text-gray-400">Sign up with your details below</p>
 
           <form className="mt-6 space-y-2" onSubmit={handleSubmit}>
             <InputField

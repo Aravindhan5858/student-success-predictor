@@ -56,7 +56,7 @@ function Dashboard() {
 
       <section className="grid gap-4 md:grid-cols-3">
         {dashboardCards.map((card) => (
-          <Card key={card.label} className="p-5">
+          <Card key={card.label} className="metric-card p-5">
             <p className="text-sm font-medium text-slate-500">{card.label}</p>
             <div className="mt-3 flex items-end justify-between gap-3">
               <h3 className="text-2xl font-bold text-slate-900 sm:text-3xl">{card.value}</h3>

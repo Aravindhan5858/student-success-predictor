@@ -13,7 +13,7 @@ function FormInput({
 }) {
   return (
     <div className="w-full">
-      <label htmlFor={id} className="mb-2 block text-sm font-medium text-slate-700">
+      <label htmlFor={id} className="mb-2 block text-sm font-medium text-white/90">
         {label}
       </label>
       <div className="relative">
@@ -26,7 +26,7 @@ function FormInput({
           step={step}
           min={min}
           max={max}
-          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition duration-200 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 sm:py-3"
+          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-pink-500/60"
         />
         {rightAdornment ? <div className="absolute inset-y-0 right-3 flex items-center">{rightAdornment}</div> : null}
       </div>

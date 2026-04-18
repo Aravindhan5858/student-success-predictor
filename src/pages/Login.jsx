@@ -42,14 +42,14 @@ function Login() {
   }
 
   return (
-    <main className="min-h-dvh bg-gradient-to-br from-indigo-100 via-sky-50 to-slate-100 p-4 sm:p-6">
+    <main className="min-h-dvh bg-gradient-to-br from-[#0b0f1a] via-[#1a0f2e] to-[#0b0f1a] p-4 sm:p-6">
       <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center sm:min-h-[calc(100dvh-3rem)]">
         <Card className="grid w-full grid-cols-1 overflow-hidden md:grid-cols-2">
-          <section className="hidden flex-col justify-between bg-indigo-600 p-10 text-white md:flex">
+          <section className="hidden flex-col justify-between bg-[linear-gradient(160deg,rgba(91,140,255,0.28),rgba(138,43,226,0.35),rgba(255,46,159,0.3))] p-10 text-white md:flex">
             <div>
-              <p className="text-sm uppercase tracking-[0.2em] text-indigo-200">Branding</p>
+              <p className="text-sm uppercase tracking-[0.2em] text-pink-200">Branding</p>
               <h1 className="mt-4 text-4xl font-bold leading-tight">Welcome Back</h1>
-              <p className="mt-4 text-indigo-100">Sign in and continue building your success journey.</p>
+              <p className="mt-4 text-gray-200">Sign in and continue building your success journey.</p>
             </div>
             <div className="relative mt-10 h-56 rounded-xl border border-white/20 bg-white/10 p-6">
               <div className="absolute -left-6 top-8 h-24 w-24 rounded-full bg-white/20" />

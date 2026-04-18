@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
@@ -6,7 +7,28 @@ import ProgressBar from '../components/ProgressBar'
 import { useAppContext } from '../context/AppContext'
 
 function StudentDashboard() {
-  const { currentStudent } = useAppContext()
+  const { currentStudent, assessments, studentInterviews, latestAssessmentResult, latestInterviewResult, getStudentFullPerformance } = useAppContext()
+  const [overallIndex, setOverallIndex] = useState(null)
+
+  useEffect(() => {
+    const loadPerformance = async () => {
+      if (!currentStudent?.id) {
+        setOverallIndex(null)
+        return
+      }
+
+      const result = await getStudentFullPerformance(String(currentStudent.id))
+      if (result.ok) {
+        const computedIndex = Number(result.data?.overallScore)
+        setOverallIndex(Number.isFinite(computedIndex) ? computedIndex : null)
+      }
+    }
+
+    loadPerformance()
+  }, [currentStudent?.id])
+
+  const latestAssessmentPercentage = Number(latestAssessmentResult?.percentage || 0)
+  const latestInterviewPercentage = Number(latestInterviewResult?.feedback?.overallScore || 0)
 
   if (!currentStudent) {
     return (
@@ -39,6 +61,62 @@ function StudentDashboard() {
             <p className="mt-2 text-3xl font-bold text-slate-900">{currentStudent.predictedScore}%</p>
           </Card>
           <Card className="p-4">
+            <p className="text-sm text-slate-500">Latest Assessment</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{latestAssessmentPercentage}%</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-sm text-slate-500">Latest Interview</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{latestInterviewPercentage}%</p>
+          </Card>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <Card className="p-4">
+            <p className="text-sm text-slate-500">Assigned Interviews</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{studentInterviews.length}</p>
+            <p className="mt-1 text-xs text-slate-500">Interviews specifically scheduled for you</p>
+            <div className="mt-4">
+              <Link to="/student/interviews">
+                <Button fullWidth={false} variant="outline" className="px-4 py-2 text-xs">
+                  View Interviews
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <p className="text-sm text-slate-500">Assigned Assessments</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{assessments.length}</p>
+            <p className="mt-1 text-xs text-slate-500">Tests available for your login only</p>
+            <div className="mt-4">
+              <Link to="/student/assessments">
+                <Button fullWidth={false} variant="outline" className="px-4 py-2 text-xs">
+                  View Assessments
+                </Button>
+              </Link>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <p className="text-sm text-slate-500">Request Center</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">Open</p>
+            <p className="mt-1 text-xs text-slate-500">View all your requests in one place</p>
+            <div className="mt-4">
+              <Link to="/my-requests">
+                <Button fullWidth={false} variant="outline" className="px-4 py-2 text-xs">
+                  Open Requests
+                </Button>
+              </Link>
+            </div>
+          </Card>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <Card className="p-4">
+            <p className="text-sm text-slate-500">Overall Performance Index</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900">{overallIndex ?? currentStudent.predictedScore}%</p>
+          </Card>
+          <Card className="p-4">
             <p className="text-sm text-slate-500">Attendance</p>
             <p className="mt-2 text-3xl font-bold text-slate-900">{currentStudent.attendance}%</p>
           </Card>
@@ -53,6 +131,7 @@ function StudentDashboard() {
           <ProgressBar value={currentStudent.marks} label="Assignment / Marks Progress" />
           <ProgressBar value={currentStudent.interactionScore} label="Classroom Interaction Progress" />
           <ProgressBar value={currentStudent.predictedScore} label="Predicted Performance" />
+          <ProgressBar value={overallIndex ?? currentStudent.predictedScore} label="Overall Performance Index" />
         </div>
 
         <div className="mt-8">
