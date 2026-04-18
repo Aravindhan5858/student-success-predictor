@@ -9,11 +9,13 @@ const adminNavItems = [
   { label: 'Predictions', to: '/prediction' },
   { label: 'Model Training', to: '/model-training' },
   { label: 'Evaluation', to: '/evaluation' },
+  { label: 'Profile', to: '/profile' },
 ]
 
 const studentNavItems = [
   { label: 'Student Dashboard', to: '/student-dashboard' },
   { label: 'My Details', to: '/student-dashboard' },
+  { label: 'Profile', to: '/profile' },
 ]
 
 function Sidebar({ open, onClose }) {
@@ -26,6 +28,7 @@ function Sidebar({ open, onClose }) {
       : [
           studentNavItems[0],
           { label: 'My Details', to: currentStudent ? `/student/${currentStudent.id}` : '/student-dashboard' },
+          studentNavItems[2],
         ]
 
   const handleLogout = () => {
@@ -43,7 +46,7 @@ function Sidebar({ open, onClose }) {
       />
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-72 transform border-r border-slate-200 bg-slate-950 text-white transition-transform duration-300 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'} md:flex md:flex-col`}
+        className={`fixed inset-y-0 left-0 z-40 w-[86vw] max-w-72 transform border-r border-slate-200 bg-slate-950 text-white transition-transform duration-300 md:w-72 md:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'} md:flex md:flex-col`}
       >
         <div className="flex items-center justify-between border-b border-white/10 px-6 py-5">
           <div>
@@ -60,14 +63,14 @@ function Sidebar({ open, onClose }) {
           </button>
         </div>
 
-        <nav className="flex-1 space-y-2 px-4 py-5">
+        <nav className="flex-1 space-y-2 overflow-y-auto px-4 py-5">
           {navItems.map((item) => (
             <NavLink
               key={item.label}
               to={item.to}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition duration-300 hover:bg-white/10 ${
+                `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition duration-200 hover:bg-white/10 ${
                   isActive ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300'
                 }`
               }
@@ -89,6 +92,8 @@ function Sidebar({ open, onClose }) {
                           ? '⚙'
                           : item.label === 'Evaluation'
                             ? '✓'
+                            : item.label === 'Profile'
+                              ? '⚪'
                             : '👤'}
               </span>
               {item.label}
@@ -97,7 +102,7 @@ function Sidebar({ open, onClose }) {
           <button
             type="button"
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-rose-300 transition duration-300 hover:bg-white/10"
+            className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-rose-300 transition duration-200 hover:bg-white/10"
           >
             <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/20">↩</span>
             Logout
@@ -105,7 +110,7 @@ function Sidebar({ open, onClose }) {
         </nav>
 
         <div className="border-t border-white/10 p-4 text-xs text-slate-400">
-          Static UI only. No backend integration.
+          Responsive student analytics workspace.
         </div>
       </aside>
     </>

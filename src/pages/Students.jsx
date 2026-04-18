@@ -70,6 +70,11 @@ function Students() {
 
   return (
     <div className="space-y-6">
+      <section className="flex flex-col gap-2">
+        <h2 className="text-2xl font-bold text-slate-900">Students</h2>
+        <p className="text-sm text-slate-500">Search, filter, and manage student records in one place.</p>
+      </section>
+
       <Card className="p-5">
         <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr_auto] md:items-end">
           <div>
@@ -104,7 +109,7 @@ function Students() {
             </select>
           </div>
 
-          <Button fullWidth={false} className="md:justify-self-end" onClick={handleExportPdf}>
+          <Button fullWidth={false} className="w-full md:w-auto md:justify-self-end" onClick={handleExportPdf}>
             Export PDF
           </Button>
         </div>
@@ -120,7 +125,7 @@ function Students() {
               <Badge tone={student.riskLevel.toLowerCase()}>{student.riskLevel}</Badge>
             </td>
             <td className="px-4 py-4">
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <Link to={`/student/${student.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
                   View
                 </Link>

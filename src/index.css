@@ -5,7 +5,29 @@
     @apply m-0 bg-slate-50 text-slate-900 antialiased;
   }
 
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply tracking-tight;
+  }
+
   * {
     @apply box-border;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-300;
   }
 }

@@ -19,8 +19,8 @@ function StudentDetails() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Student Profile</h2>
           <p className="text-sm text-slate-500">Detailed metrics and performance summary</p>

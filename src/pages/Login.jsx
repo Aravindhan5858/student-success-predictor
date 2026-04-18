@@ -42,8 +42,8 @@ function Login() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-100 via-sky-50 to-slate-100 p-4 sm:p-6">
-      <div className="mx-auto flex min-h-[calc(100vh-2rem)] w-full max-w-5xl items-center sm:min-h-[calc(100vh-3rem)]">
+    <main className="min-h-dvh bg-gradient-to-br from-indigo-100 via-sky-50 to-slate-100 p-4 sm:p-6">
+      <div className="mx-auto flex min-h-[calc(100dvh-2rem)] w-full max-w-5xl items-center sm:min-h-[calc(100dvh-3rem)]">
         <Card className="grid w-full grid-cols-1 overflow-hidden md:grid-cols-2">
           <section className="hidden flex-col justify-between bg-indigo-600 p-10 text-white md:flex">
             <div>
@@ -59,7 +59,7 @@ function Login() {
           </section>
 
           <section className="p-6 sm:p-8">
-            <h2 className="text-2xl font-bold text-slate-900">Login</h2>
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">Login</h2>
             <p className="mt-1 text-sm text-slate-500">Enter your credentials to continue</p>
 
             <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
@@ -89,7 +89,7 @@ function Login() {
               </button>
             </div>
 
-            <form className="mt-6 space-y-1" onSubmit={handleSubmit}>
+            <form className="mt-6 space-y-2" onSubmit={handleSubmit}>
               <InputField
                 id="username"
                 label={loginType === 'admin' ? 'Username' : 'Student Name / Username'}

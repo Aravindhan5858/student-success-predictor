@@ -284,17 +284,59 @@ export function AppProvider({ children }) {
     return students.find((student) => student.username === currentUser.username) ?? null
   }, [currentUser, students])
 
+  const currentUserAccount = useMemo(() => {
+    if (!currentUser || currentUser.role !== 'student') {
+      return null
+    }
+
+    return users.find((user) => user.username === currentUser.username) ?? null
+  }, [currentUser, users])
+
+  const updateUserProfile = async ({ email, password }) => {
+    if (!currentUser || currentUser.role !== 'student') {
+      return { ok: false, message: 'Only student profiles can be updated here' }
+    }
+
+    const account = users.find((user) => user.username === currentUser.username)
+    if (!account?.id) {
+      return { ok: false, message: 'Account not found' }
+    }
+
+    const updatePayload = {}
+    if (typeof email === 'string' && email.trim()) {
+      updatePayload.email = email.trim()
+    }
+
+    if (typeof password === 'string' && password.trim()) {
+      updatePayload.password = password.trim()
+    }
+
+    if (!Object.keys(updatePayload).length) {
+      return { ok: false, message: 'No changes provided' }
+    }
+
+    try {
+      await updateDoc(doc(db, USERS_COLLECTION, account.id), updatePayload)
+      await loadUsers()
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to update profile' }
+    }
+  }
+
   const value = {
     users,
     students,
     currentUser,
     currentStudent,
+    currentUserAccount,
     registerUser,
     loginUser,
     logoutUser,
     addStudent,
     updateStudent,
     deleteStudent,
+    updateUserProfile,
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>

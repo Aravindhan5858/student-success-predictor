@@ -36,10 +36,15 @@ function EditStudent() {
 
   return (
     <div className="mx-auto max-w-3xl">
+      <section className="mb-4 flex flex-col gap-2">
+        <h2 className="text-2xl font-bold text-slate-900">Edit Student</h2>
+        <p className="text-sm text-slate-500">Update profile values to keep prediction inputs accurate.</p>
+      </section>
+
       <Card className="p-6 sm:p-8">
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Edit Student</h2>
+            <h3 className="text-xl font-bold text-slate-900">Student Information</h3>
             <p className="mt-1 text-sm text-slate-500">Update student performance metrics</p>
           </div>
           <Link to="/students">

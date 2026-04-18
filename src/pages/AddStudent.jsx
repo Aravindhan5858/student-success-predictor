@@ -46,11 +46,16 @@ function AddStudent() {
 
   return (
     <div className="mx-auto max-w-3xl">
+      <section className="mb-4 flex flex-col gap-2">
+        <h2 className="text-2xl font-bold text-slate-900">Add Student</h2>
+        <p className="text-sm text-slate-500">Create a new student profile with key learning metrics.</p>
+      </section>
+
       <Card className="p-6 sm:p-8">
         <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-900">Add Student</h2>
-          <p className="mt-1 text-sm text-slate-500">Capture academic metrics for prediction analysis</p>
-          <p className="mt-2 text-xs text-indigo-700">Username is generated from student name and password is studentname + birthyear.</p>
+          <h3 className="text-xl font-bold text-slate-900">Student Information</h3>
+          <p className="mt-1 text-sm text-slate-500">Capture academic metrics for prediction analysis.</p>
+          <p className="mt-2 rounded-lg bg-indigo-50 px-3 py-2 text-xs text-indigo-700">Username is generated from student name and password is studentname + birthyear.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">

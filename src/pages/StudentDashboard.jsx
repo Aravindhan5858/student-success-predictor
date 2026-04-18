@@ -18,11 +18,16 @@ function StudentDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <section className="flex flex-col gap-2">
+        <h2 className="text-2xl font-bold text-slate-900">Student Dashboard</h2>
+        <p className="text-sm text-slate-500">Track your current performance and academic progress indicators.</p>
+      </section>
+
       <Card className="p-6 sm:p-8">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-slate-900">Student Dashboard</h2>
+            <h3 className="text-xl font-bold text-slate-900 sm:text-2xl">Performance Summary</h3>
             <p className="mt-1 text-sm text-slate-500">Welcome, {currentStudent.name}. Here is your current performance summary.</p>
           </div>
           <Badge tone={currentStudent.riskLevel.toLowerCase()}>{currentStudent.riskLevel} Risk</Badge>

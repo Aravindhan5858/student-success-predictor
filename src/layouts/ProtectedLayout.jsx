@@ -8,14 +8,16 @@ function ProtectedLayout() {
   const location = useLocation()
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-100 text-slate-900">
+    <div className="min-h-dvh bg-slate-100 text-slate-900">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="min-h-screen md:pl-72">
+      <div className="min-h-dvh md:pl-72">
         <Navbar onMenuClick={() => setSidebarOpen(true)} />
 
-        <main key={location.pathname} className="h-[calc(100vh-64px)] overflow-y-auto p-4 sm:p-6">
-          <Outlet />
+        <main key={location.pathname} className="h-[calc(100dvh-65px)] overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+          <div className="mx-auto w-full max-w-7xl">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

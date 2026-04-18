@@ -8,6 +8,7 @@ import Login from './pages/Login'
 import ModelTraining from './pages/ModelTraining'
 import NotFound from './pages/NotFound'
 import Prediction from './pages/Prediction'
+import Profile from './pages/Profile'
 import Register from './pages/Register'
 import StudentDashboard from './pages/StudentDashboard'
 import StudentDetails from './pages/StudentDetails'
@@ -103,6 +104,7 @@ function App() {
         />
         <Route path="/student-dashboard" element={<StudentDashboard />} />
         <Route path="/student/:id" element={<StudentDetails />} />
+        <Route path="/profile" element={<Profile />} />
       </Route>
 
       <Route path="/404" element={<NotFound />} />

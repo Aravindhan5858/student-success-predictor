@@ -78,8 +78,13 @@ function ModelTraining() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <Card className="p-6 sm:p-8">
+      <section className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold text-slate-900">Model Training</h2>
+        <p className="text-sm text-slate-500">Tune model settings and monitor training performance in real time.</p>
+      </section>
+
+      <Card className="p-6 sm:p-8">
+        <h3 className="text-xl font-bold text-slate-900 sm:text-2xl">Training Configuration</h3>
         <p className="mt-1 text-sm text-slate-500">
           Configure training options and run model tuning for better prediction performance.
         </p>
@@ -199,31 +204,31 @@ function ModelTraining() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <Card className="p-4">
               <p className="text-sm text-slate-500">Selected Model</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900">{selectedModel}</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900 sm:text-xl">{selectedModel}</p>
             </Card>
             <Card className="p-4">
               <p className="text-sm text-slate-500">Training Status</p>
               <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-xl font-semibold text-slate-900">{trainingStateLabel}</p>
+                <p className="text-lg font-semibold text-slate-900 sm:text-xl">{trainingStateLabel}</p>
                 <Badge tone={trainingStateTone[trainingState]}>{trainingStateLabel}</Badge>
               </div>
             </Card>
             <Card className="p-4">
               <p className="text-sm text-slate-500">Accuracy</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900">{performance.accuracy}%</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900 sm:text-xl">{performance.accuracy}%</p>
             </Card>
             <Card className="p-4">
               <p className="text-sm text-slate-500">Precision</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900">{performance.precision}%</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900 sm:text-xl">{performance.precision}%</p>
             </Card>
             <Card className="p-4">
               <p className="text-sm text-slate-500">Recall</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900">{performance.recall}%</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900 sm:text-xl">{performance.recall}%</p>
             </Card>
             <Card className="p-4">
               <p className="text-sm text-slate-500">F1-Score</p>
               <div className="mt-2 flex items-center justify-between gap-3">
-                <p className="text-xl font-semibold text-slate-900">{performance.f1Score}%</p>
+                <p className="text-lg font-semibold text-slate-900 sm:text-xl">{performance.f1Score}%</p>
                 <Badge tone={performance.f1Score >= 90 ? 'high' : 'medium'}>
                   {performance.f1Score >= 90 ? 'Excellent' : 'Improving'}
                 </Badge>
