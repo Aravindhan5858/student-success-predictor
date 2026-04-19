@@ -1,5 +1,19 @@
 import { mongoose } from './mongo.js'
 
+const assessmentEvaluationSchema = new mongoose.Schema(
+  {
+    questionIndex: { type: Number, required: true },
+    question: { type: String, default: '' },
+    studentAnswer: { type: String, default: '' },
+    correctAnswer: { type: String, default: '' },
+    isCorrect: { type: Boolean, default: false },
+    score: { type: Number, default: 0 },
+    maxScore: { type: Number, default: 0 },
+    remarks: { type: String, default: '' },
+  },
+  { _id: false },
+)
+
 const workflowRequestSchema = new mongoose.Schema(
   {
     studentId: { type: String, required: true, index: true },
@@ -7,17 +21,31 @@ const workflowRequestSchema = new mongoose.Schema(
     studentEmail: { type: String, default: '', trim: true, lowercase: true },
     type: { type: String, enum: ['interview', 'assessment'], required: true, index: true },
     title: { type: String, default: '' },
+    senderRole: { type: String, enum: ['admin', 'student'], default: 'admin' },
+    receiverRole: { type: String, enum: ['admin', 'student'], default: 'student' },
     status: {
       type: String,
-      enum: ['Pending', 'Accepted', 'Rejected', 'Completed', 'Published'],
-      default: 'Pending',
+      enum: ['Requested', 'Accepted', 'In Progress', 'Submitted', 'Evaluated', 'Published', 'Pending', 'Rejected', 'Completed'],
+      default: 'Requested',
       index: true,
     },
     requestDate: { type: Date, default: Date.now },
+    acceptedAt: { type: Date, default: null },
+    startedAt: { type: Date, default: null },
+    submittedAt: { type: Date, default: null },
+    evaluatedAt: { type: Date, default: null },
+    publishedAt: { type: Date, default: null },
     scheduledDate: { type: Date, default: null },
     meetingLink: { type: String, default: '' },
     interviewType: { type: String, default: 'Technical' },
     assessmentId: { type: String, default: '' },
+    assessmentTitle: { type: String, default: '' },
+    answers: { type: [String], default: [] },
+    evaluation: { type: [assessmentEvaluationSchema], default: [] },
+    score: { type: Number, default: 0 },
+    percentage: { type: Number, default: 0 },
+    resultStatus: { type: String, default: '' },
+    feedback: { type: String, default: '' },
     result: {
       technicalScore: { type: Number, default: 0 },
       communication: { type: Number, default: 0 },

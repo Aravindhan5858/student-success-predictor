@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import FormInput from '../components/FormInput'
 import { useAppContext } from '../context/AppContext'
+import { getInterviewStatusTone } from '../lib/interviewWorkflow'
 
 function AdminInterviewResult() {
   const { id } = useParams()
-  const { workflowRequests, loadWorkflowRequests, updateWorkflowRequestStatus, publishInterviewResult } = useAppContext()
+  const { workflowRequests, loadWorkflowRequests, saveInterviewResult, publishInterviewRequest } = useAppContext()
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [form, setForm] = useState({
@@ -28,24 +30,53 @@ function AdminInterviewResult() {
 
   useEffect(() => {
     loadWorkflowRequests('interview')
-  }, [])
+  }, [id])
+
+  useEffect(() => {
+    if (!request) {
+      return
+    }
+
+    setForm({
+      technicalScore: Number(request.result?.technicalScore || 0),
+      communication: Number(request.result?.communication || 0),
+      confidence: Number(request.result?.confidence || 0),
+      remarks: request.result?.remarks || '',
+    })
+  }, [request])
 
   const handleChange = (field) => (event) => {
     setForm((previous) => ({ ...previous, [field]: event.target.value }))
   }
 
-  const handleSubmit = async (event) => {
+  const handleSave = async (event) => {
     event.preventDefault()
     setMessage('')
     setError('')
 
-    const markCompleted = await updateWorkflowRequestStatus(id, 'Completed')
-    if (!markCompleted.ok) {
-      setError(markCompleted.message)
+    const result = await saveInterviewResult({
+      requestId: id,
+      technicalScore: Number(form.technicalScore || 0),
+      communication: Number(form.communication || 0),
+      confidence: Number(form.confidence || 0),
+      remarks: form.remarks,
+      feedback: form.remarks,
+    })
+
+    if (!result.ok) {
+      setError(result.message)
       return
     }
 
-    const result = await publishInterviewResult({
+    setMessage('Interview marked as Completed and result saved')
+    await loadWorkflowRequests('interview')
+  }
+
+  const handlePublish = async () => {
+    setMessage('')
+    setError('')
+
+    const result = await publishInterviewRequest({
       requestId: id,
       technicalScore: Number(form.technicalScore || 0),
       communication: Number(form.communication || 0),
@@ -60,6 +91,7 @@ function AdminInterviewResult() {
     }
 
     setMessage('Interview result published successfully')
+    await loadWorkflowRequests('interview')
   }
 
   if (!request) {
@@ -80,10 +112,13 @@ function AdminInterviewResult() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900">Interview Result Entry</h2>
         <p className="text-sm text-slate-500">Student: {request.studentName}</p>
+        <div className="mt-2">
+          <Badge tone={getInterviewStatusTone(request.status)}>{request.status}</Badge>
+        </div>
       </section>
 
       <Card className="p-6 sm:p-8">
-        <form className="grid gap-4" onSubmit={handleSubmit}>
+        <form className="grid gap-4" onSubmit={handleSave}>
           <div className="grid gap-4 sm:grid-cols-3">
             <FormInput id="tech-score" label="Technical Score" type="number" min="0" max="100" value={form.technicalScore} onChange={handleChange('technicalScore')} error=" " />
             <FormInput id="communication" label="Communication" type="number" min="0" max="100" value={form.communication} onChange={handleChange('communication')} error=" " />
@@ -108,8 +143,11 @@ function AdminInterviewResult() {
           {message ? <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{message}</p> : null}
           {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
 
-          <div className="flex justify-end">
-            <Button type="submit" fullWidth={false}>Save & Publish</Button>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="submit" fullWidth={false}>Save Completed</Button>
+            <Button type="button" fullWidth={false} onClick={handlePublish} disabled={request.status !== 'Completed' && request.status !== 'Published'}>
+              Publish
+            </Button>
           </div>
         </form>
       </Card>

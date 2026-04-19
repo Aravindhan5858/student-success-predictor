@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import { addDoc, collection, deleteDoc, doc, getDocs, query, where, updateDoc } from 'firebase/firestore'
+import { addDoc, collection, deleteDoc, doc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 
 const AUTH_KEY = 'sps_auth_user'
@@ -7,6 +7,12 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000/api'
 const USERS_COLLECTION = 'users'
 const STUDENTS_COLLECTION = 'students'
 const MOCK_INTERVIEW_COLLECTION = 'mockInterviewRequests'
+const INTERVIEWS_COLLECTION = 'interviews'
+const WORKFLOW_REQUESTS_COLLECTION = 'workflowRequests'
+const ASSESSMENTS_COLLECTION = 'assessments'
+const ASSESSMENT_RESULTS_COLLECTION = 'assessmentResults'
+const STUDENT_ASSESSMENTS_COLLECTION = 'studentAssessments'
+const INTERVIEW_RESULTS_COLLECTION = 'interviewResults'
 const ADMIN_USERNAME = 'admin'
 const ADMIN_PASSWORD = 'admin123'
 
@@ -58,6 +64,7 @@ export function AppProvider({ children }) {
   const [assessments, setAssessments] = useState([])
   const [assessmentResults, setAssessmentResults] = useState([])
   const [workflowRequests, setWorkflowRequests] = useState([])
+  const [studentAssessments, setStudentAssessments] = useState([])
   const [mockInterviewRequests, setMockInterviewRequests] = useState([])
   const [currentUser, setCurrentUser] = useState(() => parseFromStorage(AUTH_KEY, null))
 
@@ -78,6 +85,38 @@ export function AppProvider({ children }) {
     }
 
     return data
+  }
+
+  const getEntityDocId = (item) => {
+    if (!item || typeof item !== 'object') {
+      return ''
+    }
+
+    return String(item._id || item.id || item.requestId || '')
+  }
+
+  const syncEntityToFirestore = async (collectionName, item) => {
+    const docId = getEntityDocId(item)
+    if (!docId) {
+      return
+    }
+
+    await setDoc(
+      doc(db, collectionName, docId),
+      {
+        ...item,
+        syncedAt: new Date().toISOString(),
+      },
+      { merge: true },
+    )
+  }
+
+  const syncListToFirestore = async (collectionName, items = []) => {
+    if (!Array.isArray(items) || !items.length) {
+      return
+    }
+
+    await Promise.all(items.map((item) => syncEntityToFirestore(collectionName, item)))
   }
 
   const loadUsers = async () => {
@@ -121,8 +160,10 @@ export function AppProvider({ children }) {
   const loadInterviews = async () => {
     try {
       const loadedInterviews = await interviewApiRequest('/interviews')
-      setInterviews(Array.isArray(loadedInterviews) ? loadedInterviews : [])
-      return loadedInterviews
+      const normalized = Array.isArray(loadedInterviews) ? loadedInterviews : []
+      setInterviews(normalized)
+      await syncListToFirestore(INTERVIEWS_COLLECTION, normalized)
+      return normalized
     } catch {
       setInterviews([])
       return []
@@ -149,6 +190,13 @@ export function AppProvider({ children }) {
       const loadedRequests = await interviewApiRequest(`/requests${query}`)
       const normalized = Array.isArray(loadedRequests) ? loadedRequests : []
       setWorkflowRequests(normalized)
+      await syncListToFirestore(WORKFLOW_REQUESTS_COLLECTION, normalized)
+
+      const interviewPublished = normalized.filter((item) => item.type === 'interview' && item.status === 'Published')
+      if (interviewPublished.length) {
+        await syncListToFirestore(INTERVIEW_RESULTS_COLLECTION, interviewPublished)
+      }
+
       return normalized
     } catch {
       setWorkflowRequests([])
@@ -166,9 +214,34 @@ export function AppProvider({ children }) {
       const loadedRequests = await interviewApiRequest(`/student/${studentId}/requests`)
       const normalized = Array.isArray(loadedRequests) ? loadedRequests : []
       setWorkflowRequests(normalized)
+      await syncListToFirestore(WORKFLOW_REQUESTS_COLLECTION, normalized)
+
+      const interviewPublished = normalized.filter((item) => item.type === 'interview' && item.status === 'Published')
+      if (interviewPublished.length) {
+        await syncListToFirestore(INTERVIEW_RESULTS_COLLECTION, interviewPublished)
+      }
+
       return normalized
     } catch {
       setWorkflowRequests([])
+      return []
+    }
+  }
+
+  const loadStudentAssessments = async (studentId) => {
+    try {
+      if (!studentId) {
+        setStudentAssessments([])
+        return []
+      }
+
+      const loadedRequests = await interviewApiRequest(`/student/${studentId}/assessments`)
+      const normalized = Array.isArray(loadedRequests) ? loadedRequests : []
+      setStudentAssessments(normalized)
+      await syncListToFirestore(STUDENT_ASSESSMENTS_COLLECTION, normalized)
+      return normalized
+    } catch {
+      setStudentAssessments([])
       return []
     }
   }
@@ -179,6 +252,7 @@ export function AppProvider({ children }) {
       const loadedAssessments = await interviewApiRequest(`/assessments${query}`)
       const normalized = Array.isArray(loadedAssessments) ? loadedAssessments : []
       setAssessments(normalized)
+      await syncListToFirestore(ASSESSMENTS_COLLECTION, normalized)
       return normalized
     } catch {
       setAssessments([])
@@ -196,6 +270,7 @@ export function AppProvider({ children }) {
       const loadedResults = await interviewApiRequest(`/assessment/results/${studentId}`)
       const normalized = Array.isArray(loadedResults) ? loadedResults : []
       setAssessmentResults(normalized)
+      await syncListToFirestore(ASSESSMENT_RESULTS_COLLECTION, normalized)
       return normalized
     } catch {
       setAssessmentResults([])
@@ -226,6 +301,7 @@ export function AppProvider({ children }) {
         setInterviews([])
         setInterviewRequests([])
         setWorkflowRequests([])
+        setStudentAssessments([])
         setAssessments([])
         setAssessmentResults([])
       }
@@ -511,6 +587,10 @@ export function AppProvider({ children }) {
         body: JSON.stringify(payload),
       })
 
+      if (result?.interview) {
+        await syncEntityToFirestore(INTERVIEWS_COLLECTION, result.interview)
+      }
+
       await loadInterviews()
       return { ok: true, data: result }
     } catch (error) {
@@ -520,10 +600,14 @@ export function AppProvider({ children }) {
 
   const sendInterviewRequest = async (payload) => {
     try {
-      const result = await interviewApiRequest('/request/interview', {
+      const result = await interviewApiRequest('/interview/schedule', {
         method: 'POST',
         body: JSON.stringify(payload),
       })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
 
       if (currentUser?.role === 'admin') {
         await loadWorkflowRequests('interview')
@@ -535,20 +619,205 @@ export function AppProvider({ children }) {
     }
   }
 
+  const acceptInterviewRequest = async (requestId) => {
+    try {
+      const result = await interviewApiRequest(`/interview/${requestId}/accept`, {
+        method: 'PUT',
+      })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
+      if (currentStudent?.id) {
+        await loadStudentWorkflowRequests(String(currentStudent.id))
+      }
+      await loadWorkflowRequests('interview')
+
+      return { ok: true, data: result }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to accept interview request' }
+    }
+  }
+
+  const completeInterviewRequest = async (requestId) => {
+    try {
+      const result = await interviewApiRequest(`/interview/${requestId}/complete`, {
+        method: 'PUT',
+      })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
+      await loadWorkflowRequests('interview')
+      if (currentStudent?.id) {
+        await loadStudentWorkflowRequests(String(currentStudent.id))
+      }
+
+      return { ok: true, data: result }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to complete interview request' }
+    }
+  }
+
+  const saveInterviewResult = async ({ requestId, technicalScore = 0, communication = 0, confidence = 0, remarks = '', feedback = '' }) => {
+    try {
+      const result = await interviewApiRequest(`/interview/${requestId}/result`, {
+        method: 'POST',
+        body: JSON.stringify({ technicalScore, communication, confidence, remarks, feedback }),
+      })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
+      await loadWorkflowRequests('interview')
+      if (currentStudent?.id) {
+        await loadStudentWorkflowRequests(String(currentStudent.id))
+      }
+
+      return { ok: true, data: result }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to save interview result' }
+    }
+  }
+
+  const publishInterviewRequest = async ({ requestId, technicalScore = 0, communication = 0, confidence = 0, remarks = '', feedback = '' }) => {
+    try {
+      const result = await interviewApiRequest(`/interview/${requestId}/publish`, {
+        method: 'PUT',
+        body: JSON.stringify({ technicalScore, communication, confidence, remarks, feedback }),
+      })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+        await syncEntityToFirestore(INTERVIEW_RESULTS_COLLECTION, result.request)
+      }
+
+      await loadWorkflowRequests('interview')
+      if (currentStudent?.id) {
+        await loadStudentWorkflowRequests(String(currentStudent.id))
+      }
+
+      return { ok: true, data: result }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to publish interview result' }
+    }
+  }
+
   const sendAssessmentRequest = async (payload) => {
     try {
-      const result = await interviewApiRequest('/request/assessment', {
+      const result = await interviewApiRequest('/assessment/request', {
         method: 'POST',
         body: JSON.stringify(payload),
       })
 
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
       if (currentUser?.role === 'admin') {
         await loadWorkflowRequests('assessment')
+        if (payload.studentId) {
+          await loadStudentAssessments(String(payload.studentId))
+        }
       }
 
       return { ok: true, data: result }
     } catch (error) {
       return { ok: false, message: error.message || 'Failed to send assessment request' }
+    }
+  }
+
+  const requestAssessment = sendAssessmentRequest
+
+  const acceptAssessmentRequest = async (requestId) => {
+    try {
+      const result = await interviewApiRequest(`/assessment/${requestId}/accept`, {
+        method: 'PUT',
+      })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
+      if (currentStudent?.id) {
+        await loadStudentAssessments(String(currentStudent.id))
+        await loadStudentWorkflowRequests(String(currentStudent.id))
+      }
+      await loadWorkflowRequests('assessment')
+
+      return { ok: true, data: result }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to accept assessment request' }
+    }
+  }
+
+  const submitAssessmentAttempt = async ({ requestId, answers = [], status = 'Submitted' }) => {
+    try {
+      const result = await interviewApiRequest(`/assessment/${requestId}/submit`, {
+        method: 'PUT',
+        body: JSON.stringify({ answers, status }),
+      })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
+      if (currentStudent?.id) {
+        await loadStudentAssessments(String(currentStudent.id))
+        await loadStudentWorkflowRequests(String(currentStudent.id))
+      }
+      await loadWorkflowRequests('assessment')
+
+      return { ok: true, data: result }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to submit assessment attempt' }
+    }
+  }
+
+  const evaluateAssessmentRequest = async ({ requestId, evaluation = [], score = 0, percentage = 0, resultStatus = '', feedback = '' }) => {
+    try {
+      const result = await interviewApiRequest(`/assessment/${requestId}/evaluate`, {
+        method: 'POST',
+        body: JSON.stringify({ evaluation, score, percentage, resultStatus, feedback }),
+      })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
+      await loadWorkflowRequests('assessment')
+      if (currentStudent?.id) {
+        await loadStudentAssessments(String(currentStudent.id))
+      }
+
+      return { ok: true, data: result }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to evaluate assessment request' }
+    }
+  }
+
+  const publishAssessmentRequest = async ({ requestId, score = 0, percentage = 0, resultStatus = '', feedback = '' }) => {
+    try {
+      const result = await interviewApiRequest(`/assessment/${requestId}/publish`, {
+        method: 'POST',
+        body: JSON.stringify({ score, percentage, resultStatus, feedback }),
+      })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
+      await loadWorkflowRequests('assessment')
+      if (currentStudent?.id) {
+        await loadStudentAssessments(String(currentStudent.id))
+      }
+
+      return { ok: true, data: result }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to publish assessment result' }
     }
   }
 
@@ -558,6 +827,10 @@ export function AppProvider({ children }) {
         method: 'PUT',
         body: JSON.stringify({ status }),
       })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
 
       if (currentUser?.role === 'student' && currentStudent?.id) {
         await loadStudentWorkflowRequests(String(currentStudent.id))
@@ -573,10 +846,20 @@ export function AppProvider({ children }) {
 
   const publishInterviewResult = async (payload) => {
     try {
-      const result = await interviewApiRequest('/interview/result', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
+      const result = payload?.requestId
+        ? await interviewApiRequest(`/interview/${payload.requestId}/publish`, {
+            method: 'PUT',
+            body: JSON.stringify(payload),
+          })
+        : await interviewApiRequest('/interview/result', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+          })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+        await syncEntityToFirestore(INTERVIEW_RESULTS_COLLECTION, result.request)
+      }
 
       if (currentUser?.role === 'student' && currentStudent?.id) {
         await loadStudentWorkflowRequests(String(currentStudent.id))
@@ -597,6 +880,10 @@ export function AppProvider({ children }) {
         body: JSON.stringify(payload),
       })
 
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
       if (currentUser?.role === 'student' && currentStudent?.id) {
         await loadStudentWorkflowRequests(String(currentStudent.id))
       } else {
@@ -616,6 +903,10 @@ export function AppProvider({ children }) {
         body: JSON.stringify(payload),
       })
 
+      if (result?.interview) {
+        await syncEntityToFirestore(INTERVIEWS_COLLECTION, result.interview)
+      }
+
       await loadInterviews()
       return { ok: true, data: result }
     } catch (error) {
@@ -630,6 +921,10 @@ export function AppProvider({ children }) {
         body: JSON.stringify({ interviewId, communication, technicalSkills, confidence, remarks }),
       })
 
+      if (result?.interview) {
+        await syncEntityToFirestore(INTERVIEWS_COLLECTION, result.interview)
+      }
+
       await loadInterviews()
       return { ok: true, data: result }
     } catch (error) {
@@ -639,10 +934,14 @@ export function AppProvider({ children }) {
 
   const createAssessment = async (payload) => {
     try {
-      const result = await interviewApiRequest('/assessments', {
+      const result = await interviewApiRequest('/assessment/create', {
         method: 'POST',
         body: JSON.stringify(payload),
       })
+
+      if (result?.assessment) {
+        await syncEntityToFirestore(ASSESSMENTS_COLLECTION, result.assessment)
+      }
 
       await loadAssessments()
       return { ok: true, data: result }
@@ -668,8 +967,12 @@ export function AppProvider({ children }) {
     try {
       const result = await interviewApiRequest('/assessment/submit', {
         method: 'POST',
-        body: JSON.stringify({ assessmentId, studentId, studentName, answers, requestId: '' }),
+        body: JSON.stringify({ assessmentId, studentId, studentName, answers, requestId: '', status: 'Submitted' }),
       })
+
+      if (result?.submission) {
+        await syncEntityToFirestore(ASSESSMENT_RESULTS_COLLECTION, result.submission)
+      }
 
       await loadAssessmentResults(studentId)
       return { ok: true, data: result }
@@ -680,13 +983,18 @@ export function AppProvider({ children }) {
 
   const submitAssessmentRequestResponse = async ({ assessmentId, studentId, studentName, answers, requestId }) => {
     try {
-      const result = await interviewApiRequest('/assessment/submit', {
-        method: 'POST',
-        body: JSON.stringify({ assessmentId, studentId, studentName, answers, requestId }),
+      const result = await interviewApiRequest(`/assessment/${requestId}/submit`, {
+        method: 'PUT',
+        body: JSON.stringify({ answers, status: 'Submitted' }),
       })
+
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
 
       await loadAssessmentResults(studentId)
       if (currentStudent?.id) {
+        await loadStudentAssessments(String(currentStudent.id))
         await loadStudentWorkflowRequests(String(currentStudent.id))
       }
 
@@ -740,6 +1048,7 @@ export function AppProvider({ children }) {
     if (currentStudent?.id) {
       loadAssessmentResults(String(currentStudent.id))
       loadAssessments(String(currentStudent.id))
+      loadStudentAssessments(String(currentStudent.id))
       loadStudentWorkflowRequests(String(currentStudent.id))
     }
   }, [currentStudent?.id])
@@ -750,6 +1059,7 @@ export function AppProvider({ children }) {
     }
 
     const intervalId = setInterval(() => {
+      loadStudentAssessments(String(currentStudent.id))
       loadStudentWorkflowRequests(String(currentStudent.id))
     }, 10000)
 
@@ -769,8 +1079,8 @@ export function AppProvider({ children }) {
   }, [studentWorkflowRequests])
 
   const studentAssessmentRequests = useMemo(() => {
-    return studentWorkflowRequests.filter((request) => request.type === 'assessment')
-  }, [studentWorkflowRequests])
+    return studentAssessments.length ? studentAssessments : studentWorkflowRequests.filter((request) => request.type === 'assessment')
+  }, [studentAssessments, studentWorkflowRequests])
 
   const value = {
     users,
@@ -787,6 +1097,7 @@ export function AppProvider({ children }) {
     latestAssessmentResult,
     latestInterviewResult,
     mockInterviewRequests,
+    studentAssessments,
     currentUser,
     currentStudent,
     currentUserAccount,
@@ -801,10 +1112,19 @@ export function AppProvider({ children }) {
     updateMockInterviewRequestStatus,
     addInterviewFeedback,
     createAssessment,
+    requestAssessment,
+    acceptAssessmentRequest,
+    submitAssessmentAttempt,
+    evaluateAssessmentRequest,
+    publishAssessmentRequest,
     deleteAssessment,
     submitAssessment,
     submitAssessmentRequestResponse,
     sendInterviewRequest,
+    acceptInterviewRequest,
+    completeInterviewRequest,
+    saveInterviewResult,
+    publishInterviewRequest,
     sendAssessmentRequest,
     updateWorkflowRequestStatus,
     publishInterviewResult,
@@ -814,6 +1134,7 @@ export function AppProvider({ children }) {
     loadInterviewRequests,
     loadWorkflowRequests,
     loadStudentWorkflowRequests,
+    loadStudentAssessments,
     loadAssessments,
     loadAssessmentResults,
     loadInterviews,

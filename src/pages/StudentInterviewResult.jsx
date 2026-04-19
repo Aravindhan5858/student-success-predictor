@@ -3,6 +3,7 @@ import Badge from '../components/Badge'
 import Card from '../components/Card'
 import Table from '../components/Table'
 import { useAppContext } from '../context/AppContext'
+import { getInterviewStatusTone } from '../lib/interviewWorkflow'
 
 function StudentInterviewResult() {
   const { currentStudent, studentInterviewRequests, loadStudentWorkflowRequests } = useAppContext()
@@ -33,7 +34,7 @@ function StudentInterviewResult() {
             <td className="px-4 py-4 text-slate-600">{item.result?.confidence || 0}</td>
             <td className="px-4 py-4 font-semibold text-slate-900">{item.result?.overallScore || 0}%</td>
             <td className="px-4 py-4">
-              <Badge tone="low">{item.status}</Badge>
+              <Badge tone={getInterviewStatusTone(item.status)}>{item.status}</Badge>
             </td>
             <td className="px-4 py-4 text-slate-600">{item.result?.remarks || '-'}</td>
           </tr>

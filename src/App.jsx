@@ -1,12 +1,14 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedLayout from './layouts/ProtectedLayout'
 import AddStudent from './pages/AddStudent'
-import AdminAssessmentResult from './pages/AdminAssessmentResult'
-import AdminAssessments from './pages/AdminAssessments'
+import AdminAssessmentRequests from './pages/AdminAssessmentRequests'
+import AdminEvaluateAssessment from './pages/AdminEvaluateAssessment'
 import AdminInterviewResult from './pages/AdminInterviewResult'
 import AdminInterviewRequests from './pages/AdminInterviewRequests'
 import AdminInterviews from './pages/AdminInterviews'
 import AdminScheduleInterview from './pages/AdminScheduleInterview'
+import AdminPublishResult from './pages/AdminPublishResult'
+import AdminSendAssessment from './pages/AdminSendAssessment'
 import Assessments from './pages/Assessments'
 import CreateAssessment from './pages/CreateAssessment'
 import Dashboard from './pages/Dashboard'
@@ -164,7 +166,39 @@ function App() {
           path="/admin/assessments"
           element={
             <RoleRoute allowedRoles={['admin']}>
-              <AdminAssessments />
+              <AdminAssessmentRequests />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/admin/assessment-requests"
+          element={
+            <RoleRoute allowedRoles={['admin']}>
+              <AdminAssessmentRequests />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/admin/send-assessment"
+          element={
+            <RoleRoute allowedRoles={['admin']}>
+              <AdminSendAssessment />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/admin/evaluate/:id"
+          element={
+            <RoleRoute allowedRoles={['admin']}>
+              <AdminEvaluateAssessment />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/admin/publish-result/:id"
+          element={
+            <RoleRoute allowedRoles={['admin']}>
+              <AdminPublishResult />
             </RoleRoute>
           }
         />
@@ -172,7 +206,7 @@ function App() {
           path="/admin/assessment-result/:id"
           element={
             <RoleRoute allowedRoles={['admin']}>
-              <AdminAssessmentResult />
+              <AdminPublishResult />
             </RoleRoute>
           }
         />
@@ -205,6 +239,14 @@ function App() {
           element={
             <RoleRoute allowedRoles={['admin']}>
               <AdminInterviewRequests />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/admin/create-assessment"
+          element={
+            <RoleRoute allowedRoles={['admin']}>
+              <CreateAssessment />
             </RoleRoute>
           }
         />
@@ -320,6 +362,14 @@ function App() {
           element={
             <RoleRoute allowedRoles={['student']}>
               <TakeAssessment />
+            </RoleRoute>
+          }
+        />
+        <Route
+          path="/student/results"
+          element={
+            <RoleRoute allowedRoles={['student']}>
+              <MyResults />
             </RoleRoute>
           }
         />

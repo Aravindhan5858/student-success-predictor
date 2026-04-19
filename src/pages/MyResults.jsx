@@ -2,13 +2,12 @@ import Badge from '../components/Badge'
 import Card from '../components/Card'
 import Table from '../components/Table'
 import { useAppContext } from '../context/AppContext'
+import { getAssessmentResultTone } from '../lib/assessmentWorkflow'
 
 function MyResults() {
-  const { assessmentResults, studentAssessmentRequests, studentInterviewRequests } = useAppContext()
+  const { studentAssessmentRequests, studentInterviewRequests } = useAppContext()
 
-  const publishedAssessmentResults = studentAssessmentRequests.filter(
-    (request) => request.type === 'assessment' && request.status === 'Published',
-  )
+  const publishedAssessmentResults = studentAssessmentRequests.filter((request) => request.status === 'Published')
 
   const publishedInterviewResults = studentInterviewRequests.filter(
     (request) => request.type === 'interview' && request.status === 'Published',
@@ -23,20 +22,23 @@ function MyResults() {
 
       <Card className="p-5">
         <h3 className="mb-4 text-lg font-semibold text-slate-900">Assessment Results</h3>
-        <Table headers={['Assessment', 'Score', 'Percentage', 'Status', 'Published At']}>
-          {(publishedAssessmentResults.length ? publishedAssessmentResults : assessmentResults).map((result) => (
+        <Table headers={['Assessment', 'Score', 'Percentage', 'Status', 'Feedback', 'Published At']}>
+          {publishedAssessmentResults.map((result) => (
             <tr key={result._id} className="hover:bg-slate-50">
-              <td className="px-4 py-4 font-medium text-slate-900">{result.title || result.assessmentId}</td>
-              <td className="px-4 py-4 text-slate-600">{result.result?.score ?? result.score ?? 0}</td>
-              <td className="px-4 py-4 text-slate-600">{result.result?.percentage ?? result.percentage ?? 0}%</td>
+              <td className="px-4 py-4 font-medium text-slate-900">{result.assessmentTitle || result.title || result.assessment?.title || result.assessmentId}</td>
+              <td className="px-4 py-4 text-slate-600">{result.score ?? result.result?.score ?? 0}</td>
+              <td className="px-4 py-4 text-slate-600">{Number(result.percentage ?? result.result?.percentage ?? 0)}%</td>
               <td className="px-4 py-4">
-                <Badge tone={String(result.result?.status || result.status || '').toLowerCase() === 'pass' || result.status === 'Passed' ? 'low' : 'high'}>
-                  {result.result?.status || result.status || 'Published'}
+                <Badge tone={getAssessmentResultTone(result.resultStatus || result.result?.status || result.status)}>
+                  {result.resultStatus || result.result?.status || 'Published'}
                 </Badge>
               </td>
+              <td className="px-4 py-4 text-slate-600">{result.feedback || result.result?.feedback || '-'}</td>
               <td className="px-4 py-4 text-slate-600">
-                {result.result?.publishedAt
-                  ? new Date(result.result.publishedAt).toLocaleString()
+                {result.publishedAt
+                  ? new Date(result.publishedAt).toLocaleString()
+                  : result.result?.publishedAt
+                    ? new Date(result.result.publishedAt).toLocaleString()
                   : result.createdAt
                     ? new Date(result.createdAt).toLocaleString()
                     : '-'}
@@ -45,7 +47,7 @@ function MyResults() {
           ))}
         </Table>
 
-        {!publishedAssessmentResults.length && !assessmentResults.length ? (
+        {!publishedAssessmentResults.length ? (
           <Card className="mt-4 p-6 text-center text-sm text-slate-500">No assessment results available yet.</Card>
         ) : null}
       </Card>

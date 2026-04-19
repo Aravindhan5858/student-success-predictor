@@ -7,7 +7,7 @@ import Table from '../components/Table'
 import { useAppContext } from '../context/AppContext'
 
 function AdminAssessments() {
-  const { students, users, assessments, workflowRequests, loadWorkflowRequests, sendAssessmentRequest, updateWorkflowRequestStatus } = useAppContext()
+  const { students, users, assessments, workflowRequests, loadWorkflowRequests, sendAssessmentRequest } = useAppContext()
   const [selectedAssessmentId, setSelectedAssessmentId] = useState('')
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [message, setMessage] = useState('')
@@ -97,9 +97,11 @@ function AdminAssessments() {
         {error ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
       </Card>
 
-      <Table headers={['Student', 'Assessment', 'Status', 'Request Date', 'Actions']}>
+      <Table headers={['Sender', 'Receiver', 'Student', 'Assessment', 'Status', 'Request Date', 'Actions']}>
         {assessmentRequests.map((request) => (
           <tr key={request._id}>
+            <td className="px-4 py-4 text-slate-600 capitalize">{request.senderRole || 'admin'}</td>
+            <td className="px-4 py-4 text-slate-600 capitalize">{request.receiverRole || 'student'}</td>
             <td className="px-4 py-4 font-medium text-slate-900">{request.studentName}</td>
             <td className="px-4 py-4 text-slate-600">{request.title || request.assessmentId}</td>
             <td className="px-4 py-4">
@@ -110,8 +112,6 @@ function AdminAssessments() {
             <td className="px-4 py-4 text-slate-600">{request.requestDate ? new Date(request.requestDate).toLocaleString() : '-'}</td>
             <td className="px-4 py-4">
               <div className="flex flex-wrap gap-2">
-                <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => updateWorkflowRequestStatus(request._id, 'Accepted')}>Accept</Button>
-                <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => updateWorkflowRequestStatus(request._id, 'Rejected')}>Reject</Button>
                 <Link to={`/admin/assessment-result/${request._id}`}>
                   <Button fullWidth={false} className="px-3 py-2 text-xs">Add Result</Button>
                 </Link>

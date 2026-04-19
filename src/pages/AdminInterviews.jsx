@@ -5,12 +5,15 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import Table from '../components/Table'
 import { useAppContext } from '../context/AppContext'
+import { getInterviewStatusTone } from '../lib/interviewWorkflow'
 
 function AdminInterviews() {
-  const { workflowRequests, loadWorkflowRequests, updateWorkflowRequestStatus } = useAppContext()
+  const { workflowRequests, loadWorkflowRequests } = useAppContext()
 
   useEffect(() => {
     loadWorkflowRequests('interview')
+    const intervalId = setInterval(() => loadWorkflowRequests('interview'), 8000)
+    return () => clearInterval(intervalId)
   }, [])
 
   const interviewRequests = workflowRequests.filter((item) => item.type === 'interview')
@@ -34,24 +37,18 @@ function AdminInterviews() {
             <td className="px-4 py-4 text-slate-600">{request.interviewType || 'Technical'}</td>
             <td className="px-4 py-4 text-slate-600">{request.scheduledDate ? new Date(request.scheduledDate).toLocaleString() : '-'}</td>
             <td className="px-4 py-4">
-              <Badge tone={request.status === 'Published' || request.status === 'Completed' ? 'low' : request.status === 'Accepted' ? 'neutral' : request.status === 'Rejected' ? 'high' : 'medium'}>
+              <Badge tone={getInterviewStatusTone(request.status)}>
                 {request.status}
               </Badge>
             </td>
             <td className="px-4 py-4">
               <div className="flex flex-wrap gap-2">
-                <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => updateWorkflowRequestStatus(request._id, 'Pending')}>
-                  Pending
-                </Button>
-                <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => updateWorkflowRequestStatus(request._id, 'Accepted')}>
-                  Accept
-                </Button>
-                <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => updateWorkflowRequestStatus(request._id, 'Rejected')}>
-                  Reject
-                </Button>
-                <Link to={`/admin/interview-result/${request._id}`}>
-                  <Button fullWidth={false} className="px-3 py-2 text-xs">Add Result</Button>
-                </Link>
+                {(request.status === 'Accepted' || request.status === 'Completed') ? (
+                  <Link to={`/admin/interview-result/${request._id}`}>
+                    <Button fullWidth={false} className="px-3 py-2 text-xs">{request.status === 'Accepted' ? 'Enter Result' : 'Review Result'}</Button>
+                  </Link>
+                ) : null}
+                {request.status === 'Published' ? <Badge tone="low">Published</Badge> : null}
               </div>
             </td>
           </tr>

@@ -4,17 +4,15 @@ import { useAppContext } from '../context/AppContext'
 const adminNavItems = [
   { label: 'Dashboard', to: '/dashboard' },
   { label: 'Placement', to: '/placement-dashboard' },
-  { label: 'Interviews', to: '/admin/interviews' },
+  { label: 'Interview Requests', to: '/admin/interviews' },
   { label: 'Schedule Interview', to: '/admin/schedule-interview' },
-  { label: 'Interview Requests', to: '/admin/interview-requests' },
-  { label: 'Assessments', to: '/admin/assessments' },
-  { label: 'Create Assessment', to: '/create-assessment' },
+  { label: 'Create Assessment', to: '/admin/create-assessment' },
+  { label: 'Assessment Requests', to: '/admin/assessment-requests' },
   { label: 'Students', to: '/students' },
   { label: 'Add Student', to: '/add-student' },
   { label: 'Predictions', to: '/prediction' },
   { label: 'Model Training', to: '/model-training' },
   { label: 'Evaluation', to: '/evaluation' },
-  { label: 'Mock Requests', to: '/mock-interview-requests' },
 ]
 
 const studentNavItems = [
@@ -23,6 +21,7 @@ const studentNavItems = [
   { label: 'My Requests', to: '/my-requests' },
   { label: 'Interview Requests', to: '/student/interviews' },
   { label: 'Assessment Requests', to: '/student/assessments' },
+  { label: 'Results', to: '/student/results' },
 ]
 
 function Sidebar({ open, onClose }) {
@@ -99,6 +98,10 @@ function Sidebar({ open, onClose }) {
                       ? '📩'
                     : item.label === 'Create Assessment'
                       ? '✍'
+                    : item.label === 'Send Assessment'
+                      ? '📨'
+                    : item.label === 'Assessment Requests'
+                      ? '🧾'
                     : item.label === 'Assessments'
                       ? '📚'
                     : item.label === 'Request Interview'
@@ -113,6 +116,8 @@ function Sidebar({ open, onClose }) {
                       ? '📅'
                     : item.label === 'Assessment Requests'
                       ? '🧪'
+                    : item.label === 'Results'
+                      ? '🏁'
                     : item.label === 'Add Student'
                       ? '+'
                       : item.label === 'Predictions'

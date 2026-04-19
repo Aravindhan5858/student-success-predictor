@@ -4,9 +4,10 @@ import Button from '../components/Button'
 import Card from '../components/Card'
 import Table from '../components/Table'
 import { useAppContext } from '../context/AppContext'
+import { getInterviewStatusTone } from '../lib/interviewWorkflow'
 
 function StudentInterviews() {
-  const { currentStudent, studentInterviewRequests, loadStudentWorkflowRequests, updateWorkflowRequestStatus } = useAppContext()
+  const { currentStudent, studentInterviewRequests, loadStudentWorkflowRequests, acceptInterviewRequest } = useAppContext()
 
   useEffect(() => {
     if (currentStudent?.id) {
@@ -27,7 +28,7 @@ function StudentInterviews() {
             <td className="px-4 py-4 text-slate-600">{request.scheduledDate ? new Date(request.scheduledDate).toLocaleString() : '-'}</td>
             <td className="px-4 py-4 text-slate-600">{request.interviewType || 'Technical'}</td>
             <td className="px-4 py-4">
-              <Badge tone={request.status === 'Published' || request.status === 'Completed' ? 'low' : request.status === 'Accepted' ? 'neutral' : request.status === 'Rejected' ? 'high' : 'medium'}>
+              <Badge tone={getInterviewStatusTone(request.status)}>
                 {request.status}
               </Badge>
             </td>
@@ -35,15 +36,14 @@ function StudentInterviews() {
             <td className="px-4 py-4 text-slate-600">{request.result?.remarks || '-'}</td>
             <td className="px-4 py-4">
               <div className="flex flex-wrap gap-2">
-                <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => updateWorkflowRequestStatus(request._id, 'Accepted')}>
-                  Accept
-                </Button>
-                <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => updateWorkflowRequestStatus(request._id, 'Rejected')}>
-                  Reject
-                </Button>
+                {request.status === 'Pending' ? (
+                  <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => acceptInterviewRequest(request._id)}>
+                    Accept
+                  </Button>
+                ) : null}
                 {request.status === 'Accepted' && request.meetingLink ? (
                   <a href={request.meetingLink} target="_blank" rel="noreferrer">
-                    <Button fullWidth={false} className="px-3 py-2 text-xs">Join</Button>
+                    <Button fullWidth={false} className="px-3 py-2 text-xs">Join Interview</Button>
                   </a>
                 ) : null}
               </div>

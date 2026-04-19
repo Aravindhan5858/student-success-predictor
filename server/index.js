@@ -14,40 +14,244 @@ const port = process.env.PORT || 4000
 app.use(cors())
 app.use(express.json())
 
-const WORKFLOW_STATUSES = ['Pending', 'Accepted', 'Rejected', 'Completed', 'Published']
+const WORKFLOW_STATUSES = ['Requested', 'Accepted', 'In Progress', 'Submitted', 'Evaluated', 'Published', 'Pending', 'Rejected', 'Completed']
+
+function toStudentMap(entries = []) {
+  return new Map(
+    (Array.isArray(entries) ? entries : [])
+      .filter((entry) => entry && entry.id)
+      .map((entry) => [String(entry.id), entry]),
+  )
+}
+
+function getAssessmentResultPayload(request) {
+  return {
+    score: Number(request?.score || 0),
+    percentage: Number(request?.percentage || 0),
+    resultStatus: request?.resultStatus || '',
+    feedback: request?.feedback || '',
+    publishedAt: request?.publishedAt || null,
+  }
+}
+
+function buildEvaluationSummary(evaluation = [], fallbackScore = 0) {
+  const rows = Array.isArray(evaluation) ? evaluation : []
+  const maxScore = rows.reduce((sum, item) => sum + Number(item?.maxScore || 0), 0)
+  const score = rows.reduce((sum, item) => sum + Number(item?.score || 0), 0)
+  const derivedScore = maxScore > 0 ? score : Number(fallbackScore || 0)
+  const percentage = maxScore > 0 ? Math.round((score / maxScore) * 100) : 0
+
+  return {
+    score: derivedScore,
+    percentage,
+  }
+}
+
+async function loadAssessmentRequest(requestId) {
+  return WorkflowRequest.findById(requestId)
+}
+
+async function loadAssessmentDetails(assessmentId) {
+  if (!assessmentId) {
+    return null
+  }
+
+  return Assessment.findById(assessmentId)
+}
+
+async function serializeStudentAssessmentRequest(request) {
+  if (!request) {
+    return null
+  }
+
+  const assessment = await loadAssessmentDetails(request.assessmentId)
+  const plainRequest = request.toObject ? request.toObject() : request
+  return {
+    ...plainRequest,
+    assessment: assessment ? assessment.toObject() : null,
+    assessmentTitle: plainRequest.assessmentTitle || assessment?.title || plainRequest.title || '',
+    totalMarks: Number(assessment?.totalMarks || 100),
+  }
+}
+
+async function loadInterviewRequest(requestId) {
+  return WorkflowRequest.findById(requestId)
+}
+
+function buildInterviewResultPayload({ technicalScore = 0, communication = 0, confidence = 0, remarks = '', feedback = '' } = {}) {
+  const safeTechnical = Math.max(0, Math.min(100, Number(technicalScore || 0)))
+  const safeCommunication = Math.max(0, Math.min(100, Number(communication || 0)))
+  const safeConfidence = Math.max(0, Math.min(100, Number(confidence || 0)))
+  const overallScore = Math.round((safeTechnical + safeCommunication + safeConfidence) / 3)
+
+  return {
+    technicalScore: safeTechnical,
+    communication: safeCommunication,
+    confidence: safeConfidence,
+    overallScore,
+    remarks,
+    feedback,
+  }
+}
+
+async function createInterviewWorkflowRequest(payload) {
+  const {
+    studentId,
+    studentName,
+    studentEmail = '',
+    scheduledDate,
+    meetingLink = '',
+    interviewType = 'Technical',
+    title = 'Interview Request',
+  } = payload
+
+  if (!studentId || !studentName || !scheduledDate || !meetingLink) {
+    throw new Error('studentId, studentName, scheduledDate and meetingLink are required')
+  }
+
+  return WorkflowRequest.create({
+    studentId: String(studentId),
+    studentName,
+    studentEmail,
+    type: 'interview',
+    senderRole: 'admin',
+    receiverRole: 'student',
+    title,
+    scheduledDate: new Date(scheduledDate),
+    meetingLink,
+    interviewType,
+    status: 'Pending',
+    requestDate: new Date(),
+  })
+}
 
 app.post('/api/request/interview', async (req, res) => {
   try {
-    const {
-      studentId,
-      studentName,
-      studentEmail = '',
-      scheduledDate,
-      meetingLink = '',
-      interviewType = 'Technical',
-      title = 'Interview Request',
-    } = req.body
-
-    if (!studentId || !studentName) {
-      return res.status(400).json({ ok: false, message: 'studentId and studentName are required' })
-    }
-
-    const request = await WorkflowRequest.create({
-      studentId: String(studentId),
-      studentName,
-      studentEmail,
-      type: 'interview',
-      title,
-      scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-      meetingLink,
-      interviewType,
-      status: 'Pending',
-      requestDate: new Date(),
-    })
+    const request = await createInterviewWorkflowRequest(req.body)
 
     return res.status(201).json({ ok: true, request })
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message || 'Failed to create interview request' })
+  }
+})
+
+app.post('/api/interview/schedule', async (req, res) => {
+  try {
+    const request = await createInterviewWorkflowRequest(req.body)
+    return res.status(201).json({ ok: true, request })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to schedule interview request' })
+  }
+})
+
+app.put('/api/interview/:id/accept', async (req, res) => {
+  try {
+    const request = await loadInterviewRequest(req.params.id)
+    if (!request || request.type !== 'interview') {
+      return res.status(404).json({ ok: false, message: 'Interview request not found' })
+    }
+
+    const updated = await WorkflowRequest.findByIdAndUpdate(
+      req.params.id,
+      { status: 'Accepted', acceptedAt: new Date() },
+      { new: true },
+    )
+
+    return res.json({ ok: true, request: updated })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to accept interview request' })
+  }
+})
+
+app.put('/api/interview/:id/complete', async (req, res) => {
+  try {
+    const request = await loadInterviewRequest(req.params.id)
+    if (!request || request.type !== 'interview') {
+      return res.status(404).json({ ok: false, message: 'Interview request not found' })
+    }
+
+    const updates = {
+      status: 'Completed',
+      completedAt: new Date(),
+    }
+
+    const updated = await WorkflowRequest.findByIdAndUpdate(req.params.id, updates, { new: true })
+    return res.json({ ok: true, request: updated })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to mark interview completed' })
+  }
+})
+
+app.post('/api/interview/:id/result', async (req, res) => {
+  try {
+    const request = await loadInterviewRequest(req.params.id)
+    if (!request || request.type !== 'interview') {
+      return res.status(404).json({ ok: false, message: 'Interview request not found' })
+    }
+
+    const resultPayload = buildInterviewResultPayload(req.body)
+    const updated = await WorkflowRequest.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: 'Completed',
+        completedAt: new Date(),
+        result: {
+          ...request.result,
+          ...resultPayload,
+          status: 'Completed',
+        },
+      },
+      { new: true },
+    )
+
+    return res.json({ ok: true, request: updated })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to save interview result' })
+  }
+})
+
+app.put('/api/interview/:id/publish', async (req, res) => {
+  try {
+    const request = await loadInterviewRequest(req.params.id)
+    if (!request || request.type !== 'interview') {
+      return res.status(404).json({ ok: false, message: 'Interview request not found' })
+    }
+
+    const mergedPayload = buildInterviewResultPayload({
+      technicalScore: req.body?.technicalScore ?? request.result?.technicalScore,
+      communication: req.body?.communication ?? request.result?.communication,
+      confidence: req.body?.confidence ?? request.result?.confidence,
+      remarks: req.body?.remarks ?? request.result?.remarks ?? '',
+      feedback: req.body?.feedback ?? request.result?.feedback ?? '',
+    })
+
+    const updated = await WorkflowRequest.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: 'Published',
+        publishedAt: new Date(),
+        result: {
+          ...request.result,
+          ...mergedPayload,
+          status: 'Published',
+          publishedAt: new Date(),
+        },
+      },
+      { new: true },
+    )
+
+    return res.json({ ok: true, request: updated })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to publish interview result' })
+  }
+})
+
+app.get('/api/student/:id/interviews', async (req, res) => {
+  try {
+    const requests = await WorkflowRequest.find({ studentId: String(req.params.id), type: 'interview' }).sort({ createdAt: -1 })
+    return res.json(requests)
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to load student interviews' })
   }
 })
 
@@ -71,10 +275,13 @@ app.post('/api/request/assessment', async (req, res) => {
       studentName,
       studentEmail,
       type: 'assessment',
+      senderRole: 'admin',
+      receiverRole: 'student',
       title,
       assessmentId: String(assessmentId),
+      assessmentTitle: title,
       scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-      status: 'Pending',
+        status: 'Requested',
       requestDate: new Date(),
     })
 
@@ -108,6 +315,16 @@ app.get('/api/student/:id/requests', async (req, res) => {
   }
 })
 
+app.get('/api/student/:id/assessments', async (req, res) => {
+  try {
+    const requests = await WorkflowRequest.find({ studentId: String(req.params.id), type: 'assessment' }).sort({ createdAt: -1 })
+    const payload = await Promise.all(requests.map((request) => serializeStudentAssessmentRequest(request)))
+    return res.json(payload.filter(Boolean))
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to load student assessments' })
+  }
+})
+
 app.put('/api/request/:id/status', async (req, res) => {
   try {
     const { status } = req.body
@@ -126,6 +343,170 @@ app.put('/api/request/:id/status', async (req, res) => {
   }
 })
 
+app.post('/api/assessment/create', async (req, res) => {
+  try {
+    const { title, description = '', totalMarks = 100, questions = [], assignedStudentIds = [] } = req.body
+
+    if (!title) {
+      return res.status(400).json({ ok: false, message: 'Assessment title is required' })
+    }
+
+    const assessment = await Assessment.create({
+      title,
+      description,
+      totalMarks: Number(totalMarks) || 100,
+      assignedStudentIds: Array.isArray(assignedStudentIds) ? assignedStudentIds.map((id) => String(id)) : [],
+      questions,
+      status: 'active',
+    })
+
+    return res.status(201).json({ ok: true, assessment })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to create assessment' })
+  }
+})
+
+app.post('/api/assessment/request', async (req, res) => {
+  try {
+    const { studentId, studentName, studentEmail = '', assessmentId, assessmentTitle = '', title = '', scheduledDate = null } = req.body
+
+    if (!studentId || !studentName || !assessmentId) {
+      return res.status(400).json({ ok: false, message: 'studentId, studentName and assessmentId are required' })
+    }
+
+    const assessment = await loadAssessmentDetails(assessmentId)
+    if (!assessment) {
+      return res.status(404).json({ ok: false, message: 'Assessment not found' })
+    }
+
+    const request = await WorkflowRequest.create({
+      studentId: String(studentId),
+      studentName,
+      studentEmail,
+      type: 'assessment',
+      senderRole: 'admin',
+      receiverRole: 'student',
+      title: title || assessmentTitle || assessment.title,
+      assessmentId: String(assessment._id),
+      assessmentTitle: title || assessmentTitle || assessment.title,
+      scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
+      status: 'Requested',
+      requestDate: new Date(),
+    })
+
+    return res.status(201).json({ ok: true, request })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to create assessment request' })
+  }
+})
+
+app.put('/api/assessment/:id/accept', async (req, res) => {
+  try {
+    const request = await loadAssessmentRequest(req.params.id)
+    if (!request) {
+      return res.status(404).json({ ok: false, message: 'Assessment request not found' })
+    }
+
+    const updated = await WorkflowRequest.findByIdAndUpdate(
+      req.params.id,
+      { status: 'Accepted', acceptedAt: new Date() },
+      { new: true },
+    )
+
+    return res.json({ ok: true, request: updated })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to accept assessment request' })
+  }
+})
+
+app.put('/api/assessment/:id/submit', async (req, res) => {
+  try {
+    const { status = 'Submitted', answers = [] } = req.body
+    const request = await loadAssessmentRequest(req.params.id)
+    if (!request) {
+      return res.status(404).json({ ok: false, message: 'Assessment request not found' })
+    }
+
+    const allowed = ['In Progress', 'Submitted']
+    const nextStatus = allowed.includes(status) ? status : 'Submitted'
+    const updates = {
+      status: nextStatus,
+      answers: Array.isArray(answers) ? answers : [],
+    }
+
+    if (nextStatus === 'In Progress') {
+      updates.startedAt = new Date()
+    }
+
+    if (nextStatus === 'Submitted') {
+      updates.submittedAt = new Date()
+    }
+
+    const updated = await WorkflowRequest.findByIdAndUpdate(req.params.id, updates, { new: true })
+    return res.json({ ok: true, request: updated })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to submit assessment' })
+  }
+})
+
+app.post('/api/assessment/:id/evaluate', async (req, res) => {
+  try {
+    const { evaluation = [], score = 0, percentage = null, resultStatus = '', feedback = '' } = req.body
+    const request = await loadAssessmentRequest(req.params.id)
+    if (!request) {
+      return res.status(404).json({ ok: false, message: 'Assessment request not found' })
+    }
+
+    const summary = buildEvaluationSummary(evaluation, score)
+    const nextScore = Number(score ?? summary.score ?? 0)
+    const nextPercentage = percentage === null || percentage === undefined || percentage === '' ? Number(summary.percentage || 0) : Number(percentage)
+    const updated = await WorkflowRequest.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: 'Evaluated',
+        evaluation: Array.isArray(evaluation) ? evaluation : [],
+        score: nextScore,
+        percentage: nextPercentage,
+        resultStatus: resultStatus || (nextPercentage >= 40 ? 'Pass' : 'Fail'),
+        feedback,
+        evaluatedAt: new Date(),
+      },
+      { new: true },
+    )
+
+    return res.json({ ok: true, request: updated })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to evaluate assessment' })
+  }
+})
+
+app.post('/api/assessment/:id/publish', async (req, res) => {
+  try {
+    const { score = 0, percentage = 0, resultStatus = '', feedback = '' } = req.body
+    const request = await loadAssessmentRequest(req.params.id)
+    if (!request) {
+      return res.status(404).json({ ok: false, message: 'Assessment request not found' })
+    }
+
+    const updated = await WorkflowRequest.findByIdAndUpdate(
+      req.params.id,
+      {
+        status: 'Published',
+        score: Number(score || request.score || 0),
+        percentage: Number(percentage || request.percentage || 0),
+        resultStatus: resultStatus || request.resultStatus || (Number(percentage || request.percentage || 0) >= 40 ? 'Pass' : 'Fail'),
+        feedback,
+        publishedAt: new Date(),
+      },
+      { new: true },
+    )
+
+    return res.json({ ok: true, request: updated })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to publish assessment result' })
+  }
+})
+
 app.post('/api/interview/result', async (req, res) => {
   try {
     const {
@@ -141,24 +522,16 @@ app.post('/api/interview/result', async (req, res) => {
       return res.status(400).json({ ok: false, message: 'requestId is required' })
     }
 
-    const safeTechnical = Math.max(0, Math.min(100, Number(technicalScore || 0)))
-    const safeCommunication = Math.max(0, Math.min(100, Number(communication || 0)))
-    const safeConfidence = Math.max(0, Math.min(100, Number(confidence || 0)))
-    const overallScore = Math.round((safeTechnical + safeCommunication + safeConfidence) / 3)
+    const resultPayload = buildInterviewResultPayload({ technicalScore, communication, confidence, remarks, feedback })
 
     const request = await WorkflowRequest.findByIdAndUpdate(
       requestId,
       {
-        status: 'Published',
+        status: 'Completed',
+        completedAt: new Date(),
         result: {
-          technicalScore: safeTechnical,
-          communication: safeCommunication,
-          confidence: safeConfidence,
-          overallScore,
-          feedback,
-          remarks,
-          status: 'Published',
-          publishedAt: new Date(),
+          ...resultPayload,
+          status: 'Completed',
         },
       },
       { new: true },
@@ -170,7 +543,7 @@ app.post('/api/interview/result', async (req, res) => {
 
     return res.json({ ok: true, request })
   } catch (error) {
-    return res.status(500).json({ ok: false, message: error.message || 'Failed to publish interview result' })
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to save interview result' })
   }
 })
 
@@ -322,17 +695,19 @@ app.post('/api/interview-feedback', async (req, res) => {
 
 app.post('/api/assessments', async (req, res) => {
   try {
-    const { title, description = '', totalMarks = 100, assignedStudentIds = [], questions = [] } = req.body
+    const { title, description = '', totalMarks = 100, assignedStudentIds = [], assignedStudents = [], questions = [] } = req.body
 
     if (!title) {
       return res.status(400).json({ ok: false, message: 'Assessment title is required' })
     }
 
+    const normalizedAssignedStudentIds = assignedStudentIds.map((id) => String(id))
+
     const assessment = await Assessment.create({
       title,
       description,
       totalMarks: Number(totalMarks) || 100,
-      assignedStudentIds: assignedStudentIds.map((id) => String(id)),
+      assignedStudentIds: normalizedAssignedStudentIds,
       questions,
       status: 'active',
     })
@@ -391,7 +766,7 @@ app.delete('/api/assessments/:id', async (req, res) => {
 
 app.post('/api/assessment/submit', async (req, res) => {
   try {
-    const { assessmentId, studentId, studentName, answers = [], requestId = '' } = req.body
+    const { assessmentId, studentId, studentName, answers = [], requestId = '', status: nextStatus = 'Submitted' } = req.body
 
     if (!assessmentId || !studentId || !studentName) {
       return res.status(400).json({ ok: false, message: 'assessmentId, studentId and studentName are required' })
@@ -413,7 +788,7 @@ app.post('/api/assessment/submit', async (req, res) => {
 
     const percentage = Math.round((correctCount / totalQuestions) * 100)
     const score = Math.round((percentage / 100) * (Number(assessment.totalMarks) || 100))
-    const status = percentage >= 40 ? 'Passed' : 'Failed'
+    const resultStatus = percentage >= 40 ? 'Passed' : 'Failed'
 
     const submission = await AssessmentSubmission.create({
       assessmentId: String(assessment._id),
@@ -421,19 +796,16 @@ app.post('/api/assessment/submit', async (req, res) => {
       studentName,
       score,
       percentage,
-      status,
+      status: resultStatus,
       answers,
     })
 
     if (requestId) {
       await WorkflowRequest.findByIdAndUpdate(requestId, {
-        status: 'Published',
-        result: {
-          score,
-          percentage,
-          status,
-          publishedAt: new Date(),
-        },
+        status: nextStatus === 'In Progress' ? 'In Progress' : 'Submitted',
+        answers,
+        score,
+        percentage,
       })
     }
 

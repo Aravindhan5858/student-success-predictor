@@ -1,18 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
+import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import { useAppContext } from '../context/AppContext'
+import { getAssessmentStatusTone } from '../lib/assessmentWorkflow'
 
 function TakeAssessment() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const requestId = searchParams.get('requestId') || ''
-  const { currentStudent, getAssessmentById, submitAssessment, submitAssessmentRequestResponse } = useAppContext()
+  const { currentStudent, getAssessmentById, submitAssessmentAttempt, studentAssessmentRequests, loadStudentAssessments } = useAppContext()
   const [assessment, setAssessment] = useState(null)
+  const [request, setRequest] = useState(null)
   const [answers, setAnswers] = useState([])
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const startedRef = useRef(false)
+
+  const activeRequest = useMemo(() => {
+    if (!requestId) {
+      return null
+    }
+
+    return studentAssessmentRequests.find((item) => String(item._id) === String(requestId)) || request
+  }, [requestId, studentAssessmentRequests, request])
 
   useEffect(() => {
     const load = async () => {
@@ -28,6 +40,25 @@ function TakeAssessment() {
     load()
   }, [id])
 
+  useEffect(() => {
+    if (currentStudent?.id) {
+      loadStudentAssessments(String(currentStudent.id))
+    }
+  }, [currentStudent?.id])
+
+  useEffect(() => {
+    if (!activeRequest) {
+      return
+    }
+
+    setRequest(activeRequest)
+    if (activeRequest.status === 'Accepted' && !startedRef.current && requestId) {
+      startedRef.current = true
+      submitAssessmentAttempt({ requestId, status: 'In Progress' })
+      setRequest((previous) => (previous ? { ...previous, status: 'In Progress' } : previous))
+    }
+  }, [activeRequest, requestId])
+
   const handleAnswerChange = (index) => (event) => {
     setAnswers((previous) => previous.map((item, itemIndex) => (itemIndex === index ? event.target.value : item)))
   }
@@ -42,28 +73,19 @@ function TakeAssessment() {
       return
     }
 
-    const result = requestId
-      ? await submitAssessmentRequestResponse({
-          assessmentId: id,
-          studentId: String(currentStudent.id),
-          studentName: currentStudent.name,
-          answers,
-          requestId,
-        })
-      : await submitAssessment({
-          assessmentId: id,
-          studentId: String(currentStudent.id),
-          studentName: currentStudent.name,
-          answers,
-        })
+    if (!requestId) {
+      setError('Assessment request not found')
+      return
+    }
+
+    const result = await submitAssessmentAttempt({ requestId, answers, status: 'Submitted' })
 
     if (!result.ok) {
       setError(result.message)
       return
     }
 
-    const percentage = result.data?.submission?.percentage ?? 0
-    setMessage(`Assessment submitted successfully. Score: ${percentage}%`)
+    setMessage('Assessment submitted successfully. Status updated to Submitted.')
   }
 
   if (!assessment) {
@@ -79,11 +101,23 @@ function TakeAssessment() {
       <section className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold text-slate-900">Take Assessment</h2>
         <p className="text-sm text-slate-500">Complete the assessment and submit your answers.</p>
+        {activeRequest ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-slate-600">Request Status:</span>
+            <Badge tone={getAssessmentStatusTone(activeRequest.status)}>{activeRequest.status}</Badge>
+          </div>
+        ) : null}
       </section>
 
       <Card className="p-6 sm:p-8">
         <h3 className="text-xl font-bold text-slate-900">{assessment.title}</h3>
         {assessment.description ? <p className="mt-1 text-sm text-slate-500">{assessment.description}</p> : null}
+
+        {activeRequest && ['Submitted', 'Evaluated', 'Published'].includes(activeRequest.status) ? (
+          <p className="mt-4 rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700">
+            This assessment has already been submitted. You can review the questions, but editing is locked.
+          </p>
+        ) : null}
 
         <form className="mt-6 space-y-5" onSubmit={handleSubmit}>
           {(assessment.questions || []).map((question, index) => (
@@ -100,6 +134,7 @@ function TakeAssessment() {
                         value={optionLabel}
                         checked={answers[index] === optionLabel}
                         onChange={handleAnswerChange(index)}
+                        disabled={Boolean(activeRequest && ['Submitted', 'Evaluated', 'Published'].includes(activeRequest.status))}
                         className="h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500"
                       />
                       {optionLabel}. {option}
@@ -114,7 +149,9 @@ function TakeAssessment() {
           {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
 
           <div className="flex justify-end">
-            <Button type="submit" fullWidth={false} className="px-6">Submit Assessment</Button>
+            <Button type="submit" fullWidth={false} className="px-6" disabled={Boolean(activeRequest && ['Submitted', 'Evaluated', 'Published'].includes(activeRequest.status))}>
+              Submit Assessment
+            </Button>
           </div>
         </form>
       </Card>

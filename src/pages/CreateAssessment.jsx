@@ -6,7 +6,7 @@ import FormInput from '../components/FormInput'
 import { useAppContext } from '../context/AppContext'
 
 function CreateAssessment() {
-  const { students, createAssessment } = useAppContext()
+  const { students, users, createAssessment } = useAppContext()
   const [searchParams] = useSearchParams()
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -76,11 +76,28 @@ function CreateAssessment() {
         correctAnswer: item.correctAnswer,
       }))
 
+    const assignedStudents = form.assignedStudentIds
+      .map((studentId) => {
+        const student = students.find((entry) => String(entry.id) === String(studentId))
+        if (!student) {
+          return null
+        }
+
+        const email = users.find((user) => user.username === student.username)?.email || `${student.username}@student.local`
+        return {
+          id: String(student.id),
+          name: student.name,
+          email,
+        }
+      })
+      .filter(Boolean)
+
     const result = await createAssessment({
       title: form.title,
       description: form.description,
       totalMarks: Number(form.totalMarks) || 100,
       assignedStudentIds: form.assignedStudentIds.map(String),
+      assignedStudents,
       questions: normalizedQuestions,
     })
 
