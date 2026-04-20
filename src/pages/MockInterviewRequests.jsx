@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import ActionOption from '../components/ActionOption'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -45,22 +46,9 @@ function MockInterviewRequests() {
             </td>
             <td className="px-4 py-4">
               <div className="flex flex-wrap gap-2">
-                <Button
-                  fullWidth={false}
-                  variant="outline"
-                  className="px-3 py-1.5 text-xs"
-                  onClick={() => handleStatusChange(request.id, 'contacted')}
-                >
-                  Mark Contacted
-                </Button>
-                <Link to={`/schedule-interview?studentId=${encodeURIComponent(request.studentId)}`}>
-                  <Button fullWidth={false} className="px-3 py-1.5 text-xs">
-                    Schedule for Student
-                  </Button>
-                </Link>
-                <Button fullWidth={false} variant="outline" className="px-3 py-1.5 text-xs" onClick={() => handleStatusChange(request.id, 'closed')}>
-                  Close
-                </Button>
+                <ActionOption tone="view" onClick={() => handleStatusChange(request.id, 'contacted')}>View</ActionOption>
+                <ActionOption to={`/schedule-interview?studentId=${encodeURIComponent(request.studentId)}`} tone="edit">Edit</ActionOption>
+                <ActionOption tone="delete" onClick={() => handleStatusChange(request.id, 'closed')}>Delete</ActionOption>
               </div>
             </td>
           </tr>

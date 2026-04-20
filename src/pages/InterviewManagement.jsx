@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import ActionOption from '../components/ActionOption'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -94,15 +95,9 @@ function InterviewManagement() {
             </td>
             <td className="px-4 py-4">
               <div className="flex items-center gap-2">
-                <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => handleStartEdit(interview)}>
-                  Edit
-                </Button>
-                <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => handleStartFeedback(interview)}>
-                  Feedback
-                </Button>
-                <Button fullWidth={false} className="px-3 py-2 text-xs" onClick={() => handleDelete(interview._id)}>
-                  Delete
-                </Button>
+                <ActionOption tone="edit" onClick={() => handleStartEdit(interview)}>Edit</ActionOption>
+                <ActionOption tone="neutral" onClick={() => handleStartFeedback(interview)}>Feedback</ActionOption>
+                <ActionOption tone="delete" onClick={() => handleDelete(interview._id)}>Delete</ActionOption>
               </div>
             </td>
           </tr>

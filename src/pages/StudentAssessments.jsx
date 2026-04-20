@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import ActionOption from '../components/ActionOption'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -52,14 +53,10 @@ function StudentAssessments() {
             <td className="px-4 py-4">
               <div className="flex flex-wrap gap-2">
                 {request.status === 'Pending' ? (
-                  <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => handleAccept(request._id)}>
-                    Accept
-                  </Button>
+                  <ActionOption tone="edit" onClick={() => handleAccept(request._id)}>Edit</ActionOption>
                 ) : null}
                 {(request.status === 'Accepted' || request.status === 'In Progress') && request.assessmentId ? (
-                  <Link to={`/student/take-assessment/${request.assessmentId}?requestId=${encodeURIComponent(request._id)}`}>
-                    <Button fullWidth={false} className="px-3 py-2 text-xs">Start Assessment</Button>
-                  </Link>
+                  <ActionOption to={`/student/take-assessment/${request.assessmentId}?requestId=${encodeURIComponent(request._id)}`} tone="view">View</ActionOption>
                 ) : null}
               </div>
             </td>

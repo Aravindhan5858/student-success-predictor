@@ -48,6 +48,11 @@ function AdminPublishResult() {
     setMessage('')
     setError('')
 
+    if (request.status !== 'Evaluated' && request.status !== 'Published') {
+      setError('Evaluate the assessment before publishing the result')
+      return
+    }
+
     if (!request) {
       setError('Assessment request not found')
       return
@@ -123,7 +128,7 @@ function AdminPublishResult() {
           {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
 
           <div className="flex justify-end">
-            <Button type="submit" fullWidth={false}>Publish Result</Button>
+            <Button type="submit" fullWidth={false} disabled={request.status !== 'Evaluated' && request.status !== 'Published'}>Publish Result</Button>
           </div>
         </form>
       </Card>

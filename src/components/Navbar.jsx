@@ -1,18 +1,11 @@
 import { Link, useNavigate } from 'react-router-dom'
 import Button from './Button'
+import NotificationBell from './NotificationBell'
 import { useAppContext } from '../context/AppContext'
 
 function Navbar({ onMenuClick }) {
   const navigate = useNavigate()
-  const { currentUser, interviews, studentInterviews, logoutUser } = useAppContext()
-
-  const now = Date.now()
-  const upcomingCount =
-    currentUser?.role === 'admin'
-      ? interviews.filter((item) => item.status === 'Scheduled' && Number(new Date(item.interviewDateTime)) >= now).length
-      : studentInterviews.filter((item) => item.status === 'Scheduled' && Number(new Date(item.interviewDateTime)) >= now).length
-
-  const notificationTarget = currentUser?.role === 'admin' ? '/admin/interviews' : '/student/interviews'
+  const { currentUser, logoutUser } = useAppContext()
 
   const handleLogout = () => {
     logoutUser()
@@ -47,18 +40,7 @@ function Navbar({ onMenuClick }) {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
-        <Link
-          to={notificationTarget}
-          className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-[0_0_12px_rgba(91,140,255,0.24)] transition hover:shadow-[0_0_16px_rgba(255,46,159,0.5)]"
-          aria-label="Interview notifications"
-        >
-          <span aria-hidden="true">🔔</span>
-          {upcomingCount > 0 ? (
-            <span className="absolute -right-1 -top-1 inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-xs font-semibold text-white">
-              {upcomingCount}
-            </span>
-          ) : null}
-        </Link>
+        <NotificationBell />
         <Button fullWidth={false} variant="outline" className="hidden px-3 py-2 sm:inline-flex" onClick={handleLogout}>
           Logout
         </Button>

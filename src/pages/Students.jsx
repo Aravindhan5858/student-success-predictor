@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import ActionOption from '../components/ActionOption'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -126,21 +126,16 @@ function Students() {
             </td>
             <td className="px-4 py-4">
               <div className="flex flex-wrap items-center gap-3">
-                <Link to={`/student/${student.id}`} className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
-                  View
-                </Link>
-                <Link to={`/edit-student/${student.id}`} className="text-sm font-medium text-amber-600 hover:text-amber-700">
-                  Edit
-                </Link>
-                <button
-                  type="button"
+                <ActionOption to={`/student/${student.id}`} tone="view">View</ActionOption>
+                <ActionOption to={`/edit-student/${student.id}`} tone="edit">Edit</ActionOption>
+                <ActionOption
+                  tone="delete"
                   onClick={async () => {
                     await deleteStudent(student.id)
                   }}
-                  className="text-sm font-medium text-rose-600 hover:text-rose-700"
                 >
                   Delete
-                </button>
+                </ActionOption>
               </div>
             </td>
           </tr>

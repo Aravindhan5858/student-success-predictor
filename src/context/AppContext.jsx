@@ -69,22 +69,54 @@ export function AppProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(() => parseFromStorage(AUTH_KEY, null))
 
   const interviewApiRequest = async (path, options = {}) => {
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.headers || {}),
-      },
-      ...options,
-    })
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`
+    const baseCandidates = Array.from(
+      new Set([
+        API_BASE_URL,
+        '/api',
+      ].filter(Boolean)),
+    )
 
-    const isJson = response.headers.get('content-type')?.includes('application/json')
-    const data = isJson ? await response.json() : null
+    let lastError = null
 
-    if (!response.ok) {
-      throw new Error(data?.message || 'Interview API request failed')
+    for (const base of baseCandidates) {
+      try {
+        const response = await fetch(`${String(base).replace(/\/$/, '')}${normalizedPath}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(options.headers || {}),
+          },
+          ...options,
+        })
+
+        const contentType = response.headers.get('content-type') || ''
+        const isJson = contentType.includes('application/json')
+        const data = isJson ? await response.json() : null
+
+        if (!response.ok) {
+          let message = data?.message
+
+          if (!message) {
+            const text = isJson ? '' : await response.text().catch(() => '')
+            message = text?.trim() || `Interview API request failed (${response.status})`
+          }
+
+          const httpError = new Error(message)
+          httpError.__noRetry = true
+          throw httpError
+        }
+
+        return data
+      } catch (error) {
+        if (error?.__noRetry) {
+          throw error
+        }
+
+        lastError = error
+      }
     }
 
-    return data
+    throw new Error(lastError?.message || 'Interview API request failed')
   }
 
   const getEntityDocId = (item) => {
@@ -433,7 +465,19 @@ export function AppProvider({ children }) {
     setCurrentUser(null)
   }
 
-  const addStudent = async ({ name, birthYear, attendance, marks, interactionScore }) => {
+  const addStudent = async ({
+    name,
+    birthYear,
+    attendance,
+    marks,
+    interactionScore,
+    address = '',
+    age = '',
+    bloodGroup = '',
+    gender = '',
+    mobileNumber = '',
+    profilePhoto = '',
+  }) => {
     try {
       const normalizedName = name.trim()
       const normalizedUsername = normalizeStudentName(normalizedName)
@@ -462,6 +506,12 @@ export function AppProvider({ children }) {
         attendance: Number(attendance),
         marks: Number(marks),
         interactionScore: Number(interactionScore),
+        address,
+        age,
+        bloodGroup,
+        gender,
+        mobileNumber,
+        profilePhoto,
         predictedScore,
         riskLevel,
       })
@@ -500,11 +550,40 @@ export function AppProvider({ children }) {
       attendance,
       marks,
       interactionScore,
+      address: payload.address ?? matchedStudent.address ?? '',
+      age: payload.age ?? matchedStudent.age ?? '',
+      bloodGroup: payload.bloodGroup ?? matchedStudent.bloodGroup ?? '',
+      gender: payload.gender ?? matchedStudent.gender ?? '',
+      mobileNumber: payload.mobileNumber ?? matchedStudent.mobileNumber ?? '',
+      profilePhoto: payload.profilePhoto ?? matchedStudent.profilePhoto ?? '',
       predictedScore,
       riskLevel,
     })
 
     await loadStudents()
+  }
+
+  const updateCurrentStudentProfile = async (payload) => {
+    if (!currentStudent?.docId) {
+      return { ok: false, message: 'Student profile not found' }
+    }
+
+    try {
+      await updateDoc(doc(db, STUDENTS_COLLECTION, currentStudent.docId), {
+        name: payload.name ?? currentStudent.name,
+        address: payload.address ?? currentStudent.address ?? '',
+        age: payload.age ?? currentStudent.age ?? '',
+        bloodGroup: payload.bloodGroup ?? currentStudent.bloodGroup ?? '',
+        gender: payload.gender ?? currentStudent.gender ?? '',
+        mobileNumber: payload.mobileNumber ?? currentStudent.mobileNumber ?? '',
+        profilePhoto: payload.profilePhoto ?? currentStudent.profilePhoto ?? '',
+      })
+
+      await loadStudents()
+      return { ok: true }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to update profile details' }
+    }
   }
 
   const deleteStudent = async (id) => {
@@ -628,18 +707,25 @@ export function AppProvider({ children }) {
 
   const sendInterviewRequest = async (payload) => {
     try {
-      const result = await interviewApiRequest('/interview/schedule', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      })
+      let result
+
+      try {
+        result = await interviewApiRequest('/request/interview', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+      } catch {
+        result = await interviewApiRequest('/interview/schedule', {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        })
+      }
 
       if (result?.request) {
         await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
       }
 
-      if (currentUser?.role === 'admin') {
-        await loadWorkflowRequests('interview')
-      }
+      await loadWorkflowRequests('interview')
 
       return { ok: true, data: result }
     } catch (error) {
@@ -1159,6 +1245,7 @@ export function AppProvider({ children }) {
     logoutUser,
     addStudent,
     updateStudent,
+    updateCurrentStudentProfile,
     deleteStudent,
     updateUserProfile,
     submitMockInterviewRequest,

@@ -18,6 +18,12 @@ function EditStudent() {
     attendance: student?.attendance ?? '',
     marks: student?.marks ?? '',
     interactionScore: student?.interactionScore ?? '',
+    profilePhoto: student?.profilePhoto ?? '',
+    address: student?.address ?? '',
+    age: student?.age ?? '',
+    bloodGroup: student?.bloodGroup ?? '',
+    gender: student?.gender ?? '',
+    mobileNumber: student?.mobileNumber ?? '',
   }))
 
   if (!student) {
@@ -55,6 +61,16 @@ function EditStudent() {
         </div>
 
         <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label className="mb-2 block text-sm font-medium text-slate-700">Profile Picture URL</label>
+            <input
+              type="text"
+              value={form.profilePhoto}
+              onChange={handleChange('profilePhoto')}
+              placeholder="Paste image URL or base64"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+            />
+          </div>
           <FormInput id="edit-name" label="Name" value={form.name} onChange={handleChange('name')} />
           <FormInput
             id="edit-birth-year"
@@ -78,6 +94,12 @@ function EditStudent() {
             value={form.interactionScore}
             onChange={handleChange('interactionScore')}
           />
+
+          <FormInput id="edit-address" label="Address" value={form.address} onChange={handleChange('address')} />
+          <FormInput id="edit-age" label="Age" type="number" value={form.age} onChange={handleChange('age')} />
+          <FormInput id="edit-blood" label="Blood Group" value={form.bloodGroup} onChange={handleChange('bloodGroup')} />
+          <FormInput id="edit-gender" label="Gender" value={form.gender} onChange={handleChange('gender')} />
+          <FormInput id="edit-mobile" label="Mobile Number" value={form.mobileNumber} onChange={handleChange('mobileNumber')} />
 
           <div className="md:col-span-2 md:justify-self-end">
             <Button type="submit" fullWidth={false} className="px-6">

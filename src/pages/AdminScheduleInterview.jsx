@@ -89,15 +89,15 @@ function AdminScheduleInterview() {
       <Card className="p-6 sm:p-8">
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Student</label>
+            <label className="mb-2 block text-sm font-medium text-white/90">Student</label>
             <select
               value={form.studentId}
               onChange={handleChange('studentId')}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+              className="w-full rounded-lg border border-white/10 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500"
             >
-              <option value="">Select student</option>
+              <option value="" className="text-slate-900">Select student</option>
               {studentOptions.map((student) => (
-                <option key={student.id} value={student.id}>
+                <option key={student.id} value={student.id} className="text-slate-900">
                   {student.name}
                 </option>
               ))}
@@ -111,14 +111,14 @@ function AdminScheduleInterview() {
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Interview Type</label>
+              <label className="mb-2 block text-sm font-medium text-white/90">Interview Type</label>
               <select
                 value={form.interviewType}
                 onChange={handleChange('interviewType')}
-                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500"
+                className="w-full rounded-lg border border-white/10 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500"
               >
-                <option value="Technical">Technical</option>
-                <option value="HR">HR</option>
+                <option value="Technical" className="text-slate-900">Technical</option>
+                <option value="HR" className="text-slate-900">HR</option>
               </select>
             </div>
             <FormInput

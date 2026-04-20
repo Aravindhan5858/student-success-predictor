@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import ActionOption from '../components/ActionOption'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -37,13 +38,11 @@ function StudentInterviews() {
             <td className="px-4 py-4">
               <div className="flex flex-wrap gap-2">
                 {request.status === 'Pending' ? (
-                  <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => acceptInterviewRequest(request._id)}>
-                    Accept
-                  </Button>
+                  <ActionOption tone="edit" onClick={() => acceptInterviewRequest(request._id)}>Edit</ActionOption>
                 ) : null}
                 {request.status === 'Accepted' && request.meetingLink ? (
                   <a href={request.meetingLink} target="_blank" rel="noreferrer">
-                    <Button fullWidth={false} className="px-3 py-2 text-xs">Join Interview</Button>
+                    <ActionOption tone="view">View</ActionOption>
                   </a>
                 ) : null}
               </div>

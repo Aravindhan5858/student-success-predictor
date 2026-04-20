@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import ActionOption from '../components/ActionOption'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -44,9 +45,7 @@ function AdminInterviews() {
             <td className="px-4 py-4">
               <div className="flex flex-wrap gap-2">
                 {(request.status === 'Accepted' || request.status === 'Completed') ? (
-                  <Link to={`/admin/interview-result/${request._id}`}>
-                    <Button fullWidth={false} className="px-3 py-2 text-xs">{request.status === 'Accepted' ? 'Enter Result' : 'Review Result'}</Button>
-                  </Link>
+                  <ActionOption to={`/admin/interview-result/${request._id}`} tone="view">{request.status === 'Accepted' ? 'View' : 'View'}</ActionOption>
                 ) : null}
                 {request.status === 'Published' ? <Badge tone="low">Published</Badge> : null}
               </div>

@@ -15,6 +15,12 @@ function AddStudent() {
     attendance: '',
     marks: '',
     interactionScore: '',
+    address: '',
+    age: '',
+    bloodGroup: '',
+    gender: '',
+    mobileNumber: '',
+    profilePhoto: '',
   })
   const [createdCredentials, setCreatedCredentials] = useState(null)
 
@@ -39,6 +45,12 @@ function AddStudent() {
       attendance: '',
       marks: '',
       interactionScore: '',
+      address: '',
+      age: '',
+      bloodGroup: '',
+      gender: '',
+      mobileNumber: '',
+      profilePhoto: '',
     })
 
     setTimeout(() => navigate('/students'), 900)
@@ -59,6 +71,7 @@ function AddStudent() {
         </div>
 
         <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
+          <FormInput id="photo" label="Profile Picture URL" placeholder="Paste image URL or base64" value={form.profilePhoto} onChange={handleChange('profilePhoto')} />
           <FormInput id="name" label="Name" placeholder="Student name" value={form.name} onChange={handleChange('name')} />
           <FormInput
             id="birth-year"
@@ -86,6 +99,12 @@ function AddStudent() {
             onChange={handleChange('interactionScore')}
             error={error || ' '}
           />
+
+          <FormInput id="address" label="Address" placeholder="Address" value={form.address} onChange={handleChange('address')} />
+          <FormInput id="age" label="Age" type="number" placeholder="Age" value={form.age} onChange={handleChange('age')} />
+          <FormInput id="blood-group" label="Blood Group" placeholder="A+ / B+ / O+" value={form.bloodGroup} onChange={handleChange('bloodGroup')} />
+          <FormInput id="gender" label="Gender" placeholder="Male / Female / Other" value={form.gender} onChange={handleChange('gender')} />
+          <FormInput id="mobile-number" label="Mobile Number" placeholder="Mobile number" value={form.mobileNumber} onChange={handleChange('mobileNumber')} />
 
           {createdCredentials ? (
             <div className="rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700 md:col-span-2">

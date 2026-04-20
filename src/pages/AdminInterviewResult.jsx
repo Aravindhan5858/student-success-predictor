@@ -76,6 +76,11 @@ function AdminInterviewResult() {
     setMessage('')
     setError('')
 
+    if (request.status !== 'Completed' && request.status !== 'Published') {
+      setError('Mark the interview as Completed before publishing the result')
+      return
+    }
+
     const result = await publishInterviewRequest({
       requestId: id,
       technicalScore: Number(form.technicalScore || 0),

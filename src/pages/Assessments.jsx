@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import ActionOption from '../components/ActionOption'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -41,9 +42,7 @@ function Assessments() {
               <Badge tone={assessment.status === 'active' ? 'low' : 'neutral'}>{assessment.status}</Badge>
             </td>
             <td className="px-4 py-4">
-              <Button fullWidth={false} className="px-3 py-2 text-xs" onClick={() => handleDelete(assessment._id)}>
-                Delete
-              </Button>
+              <ActionOption tone="delete" onClick={() => handleDelete(assessment._id)}>Delete</ActionOption>
             </td>
           </tr>
         ))}

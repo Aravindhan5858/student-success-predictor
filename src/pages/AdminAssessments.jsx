@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import ActionOption from '../components/ActionOption'
 import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
@@ -112,9 +113,7 @@ function AdminAssessments() {
             <td className="px-4 py-4 text-slate-600">{request.requestDate ? new Date(request.requestDate).toLocaleString() : '-'}</td>
             <td className="px-4 py-4">
               <div className="flex flex-wrap gap-2">
-                <Link to={`/admin/assessment-result/${request._id}`}>
-                  <Button fullWidth={false} className="px-3 py-2 text-xs">Add Result</Button>
-                </Link>
+                <ActionOption to={`/admin/assessment-result/${request._id}`} tone="view">View</ActionOption>
               </div>
             </td>
           </tr>
