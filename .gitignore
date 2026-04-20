@@ -1,0 +1,38 @@
+# Dependencies
+node_modules/
+.next/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Virtual envs
+venv/
+.venv/
+
+# Build output
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# Test / coverage
+coverage/
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Alembic (keep first migration if present)
+alembic/versions/*.py
+!alembic/versions/001_*.py
+
+# Misc
+*.log
+.idea/
+.vscode/
