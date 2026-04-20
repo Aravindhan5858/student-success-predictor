@@ -18,10 +18,9 @@ const adminNavItems = [
 const studentNavItems = [
   { label: 'Student Dashboard', to: '/student-dashboard' },
   { label: 'My Details', to: '/student-dashboard' },
-  { label: 'My Requests', to: '/my-requests' },
   { label: 'Interview Requests', to: '/student/interviews' },
   { label: 'Assessment Requests', to: '/student/assessments' },
-  { label: 'Results', to: '/student/results' },
+  { label: 'Result', to: '/student/results' },
 ]
 
 function Sidebar({ open, onClose }) {
@@ -110,13 +109,11 @@ function Sidebar({ open, onClose }) {
                     ? '👥'
                     : item.label === 'Student Dashboard'
                       ? '⌂'
-                    : item.label === 'My Requests'
-                      ? '📬'
                     : item.label === 'Interview Requests'
                       ? '📅'
                     : item.label === 'Assessment Requests'
                       ? '🧪'
-                    : item.label === 'Results'
+                    : item.label === 'Results' || item.label === 'Result'
                       ? '🏁'
                     : item.label === 'Add Student'
                       ? '+'

@@ -7,11 +7,11 @@ import { useAppContext } from '../context/AppContext'
 import { getInterviewStatusTone } from '../lib/interviewWorkflow'
 
 function StudentInterviews() {
-  const { currentStudent, studentInterviewRequests, loadStudentWorkflowRequests, acceptInterviewRequest } = useAppContext()
+  const { currentStudent, studentInterviewRequests, loadStudentInterviewRequests, acceptInterviewRequest } = useAppContext()
 
   useEffect(() => {
     if (currentStudent?.id) {
-      loadStudentWorkflowRequests(String(currentStudent.id))
+      loadStudentInterviewRequests(String(currentStudent.id))
     }
   }, [currentStudent?.id])
 

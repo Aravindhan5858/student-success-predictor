@@ -6,11 +6,11 @@ import { useAppContext } from '../context/AppContext'
 import { getInterviewStatusTone } from '../lib/interviewWorkflow'
 
 function StudentInterviewResult() {
-  const { currentStudent, studentInterviewRequests, loadStudentWorkflowRequests } = useAppContext()
+  const { currentStudent, studentInterviewRequests, loadStudentInterviewRequests } = useAppContext()
 
   useEffect(() => {
     if (currentStudent?.id) {
-      loadStudentWorkflowRequests(String(currentStudent.id))
+      loadStudentInterviewRequests(String(currentStudent.id))
     }
   }, [currentStudent?.id])
 
@@ -29,10 +29,10 @@ function StudentInterviewResult() {
         {publishedResults.map((item) => (
           <tr key={item._id}>
             <td className="px-4 py-4 text-slate-600">{item.interviewType || 'Technical'}</td>
-            <td className="px-4 py-4 text-slate-600">{item.result?.technicalScore || 0}</td>
+            <td className="px-4 py-4 text-slate-600">{(item.result?.technical ?? item.result?.technicalScore) || 0}</td>
             <td className="px-4 py-4 text-slate-600">{item.result?.communication || 0}</td>
             <td className="px-4 py-4 text-slate-600">{item.result?.confidence || 0}</td>
-            <td className="px-4 py-4 font-semibold text-slate-900">{item.result?.overallScore || 0}%</td>
+            <td className="px-4 py-4 font-semibold text-slate-900">{(item.result?.overall ?? item.result?.overallScore) || 0}%</td>
             <td className="px-4 py-4">
               <Badge tone={getInterviewStatusTone(item.status)}>{item.status}</Badge>
             </td>

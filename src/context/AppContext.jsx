@@ -228,6 +228,34 @@ export function AppProvider({ children }) {
     }
   }
 
+  const loadStudentInterviewRequests = async (studentId) => {
+    try {
+      if (!studentId) {
+        return []
+      }
+
+      const loadedRequests = await interviewApiRequest(`/student/${studentId}/interviews`)
+      const normalized = Array.isArray(loadedRequests) ? loadedRequests : []
+
+      setWorkflowRequests((previous) => {
+        const existing = Array.isArray(previous) ? previous : []
+        const nonInterview = existing.filter((item) => !(item?.type === 'interview' && String(item?.studentId) === String(studentId)))
+        return [...normalized, ...nonInterview].sort((a, b) => Number(new Date(b?.createdAt || 0)) - Number(new Date(a?.createdAt || 0)))
+      })
+
+      await syncListToFirestore(WORKFLOW_REQUESTS_COLLECTION, normalized)
+
+      const interviewPublished = normalized.filter((item) => item.status === 'Published')
+      if (interviewPublished.length) {
+        await syncListToFirestore(INTERVIEW_RESULTS_COLLECTION, interviewPublished)
+      }
+
+      return normalized
+    } catch {
+      return []
+    }
+  }
+
   const loadStudentAssessments = async (studentId) => {
     try {
       if (!studentId) {
@@ -630,7 +658,7 @@ export function AppProvider({ children }) {
       }
 
       if (currentStudent?.id) {
-        await loadStudentWorkflowRequests(String(currentStudent.id))
+        await loadStudentInterviewRequests(String(currentStudent.id))
       }
       await loadWorkflowRequests('interview')
 
@@ -652,7 +680,7 @@ export function AppProvider({ children }) {
 
       await loadWorkflowRequests('interview')
       if (currentStudent?.id) {
-        await loadStudentWorkflowRequests(String(currentStudent.id))
+        await loadStudentInterviewRequests(String(currentStudent.id))
       }
 
       return { ok: true, data: result }
@@ -674,7 +702,7 @@ export function AppProvider({ children }) {
 
       await loadWorkflowRequests('interview')
       if (currentStudent?.id) {
-        await loadStudentWorkflowRequests(String(currentStudent.id))
+        await loadStudentInterviewRequests(String(currentStudent.id))
       }
 
       return { ok: true, data: result }
@@ -697,7 +725,7 @@ export function AppProvider({ children }) {
 
       await loadWorkflowRequests('interview')
       if (currentStudent?.id) {
-        await loadStudentWorkflowRequests(String(currentStudent.id))
+        await loadStudentInterviewRequests(String(currentStudent.id))
       }
 
       return { ok: true, data: result }
@@ -753,12 +781,33 @@ export function AppProvider({ children }) {
       return { ok: false, message: error.message || 'Failed to accept assessment request' }
     }
   }
+  const startAssessmentRequest = async (requestId) => {
+    try {
+      const result = await interviewApiRequest(`/assessment/${requestId}/start`, {
+        method: 'PUT',
+      })
 
-  const submitAssessmentAttempt = async ({ requestId, answers = [], status = 'Submitted' }) => {
+      if (result?.request) {
+        await syncEntityToFirestore(WORKFLOW_REQUESTS_COLLECTION, result.request)
+      }
+
+      if (currentStudent?.id) {
+        await loadStudentAssessments(String(currentStudent.id))
+        await loadStudentWorkflowRequests(String(currentStudent.id))
+      }
+      await loadWorkflowRequests('assessment')
+
+      return { ok: true, data: result }
+    } catch (error) {
+      return { ok: false, message: error.message || 'Failed to start assessment' }
+    }
+  }
+
+  const submitAssessmentAttempt = async ({ requestId, answers = [] }) => {
     try {
       const result = await interviewApiRequest(`/assessment/${requestId}/submit`, {
         method: 'PUT',
-        body: JSON.stringify({ answers, status }),
+        body: JSON.stringify({ answers }),
       })
 
       if (result?.request) {
@@ -802,7 +851,7 @@ export function AppProvider({ children }) {
   const publishAssessmentRequest = async ({ requestId, score = 0, percentage = 0, resultStatus = '', feedback = '' }) => {
     try {
       const result = await interviewApiRequest(`/assessment/${requestId}/publish`, {
-        method: 'POST',
+        method: 'PUT',
         body: JSON.stringify({ score, percentage, resultStatus, feedback }),
       })
 
@@ -862,7 +911,7 @@ export function AppProvider({ children }) {
       }
 
       if (currentUser?.role === 'student' && currentStudent?.id) {
-        await loadStudentWorkflowRequests(String(currentStudent.id))
+        await loadStudentInterviewRequests(String(currentStudent.id))
       } else {
         await loadWorkflowRequests('interview')
       }
@@ -1050,6 +1099,7 @@ export function AppProvider({ children }) {
       loadAssessments(String(currentStudent.id))
       loadStudentAssessments(String(currentStudent.id))
       loadStudentWorkflowRequests(String(currentStudent.id))
+      loadStudentInterviewRequests(String(currentStudent.id))
     }
   }, [currentStudent?.id])
 
@@ -1061,6 +1111,7 @@ export function AppProvider({ children }) {
     const intervalId = setInterval(() => {
       loadStudentAssessments(String(currentStudent.id))
       loadStudentWorkflowRequests(String(currentStudent.id))
+      loadStudentInterviewRequests(String(currentStudent.id))
     }, 10000)
 
     return () => clearInterval(intervalId)
@@ -1075,7 +1126,9 @@ export function AppProvider({ children }) {
   }, [workflowRequests, currentStudent?.id])
 
   const studentInterviewRequests = useMemo(() => {
-    return studentWorkflowRequests.filter((request) => request.type === 'interview')
+    return studentWorkflowRequests
+      .filter((request) => request.type === 'interview')
+      .sort((a, b) => Number(new Date(b?.createdAt || b?.scheduledDate || 0)) - Number(new Date(a?.createdAt || a?.scheduledDate || 0)))
   }, [studentWorkflowRequests])
 
   const studentAssessmentRequests = useMemo(() => {
@@ -1123,6 +1176,7 @@ export function AppProvider({ children }) {
     sendInterviewRequest,
     acceptInterviewRequest,
     completeInterviewRequest,
+    startAssessmentRequest,
     saveInterviewResult,
     publishInterviewRequest,
     sendAssessmentRequest,
@@ -1134,6 +1188,7 @@ export function AppProvider({ children }) {
     loadInterviewRequests,
     loadWorkflowRequests,
     loadStudentWorkflowRequests,
+    loadStudentInterviewRequests,
     loadStudentAssessments,
     loadAssessments,
     loadAssessmentResults,

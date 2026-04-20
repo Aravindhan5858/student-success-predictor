@@ -56,7 +56,7 @@ function AdminSendAssessment() {
     <div className="mx-auto max-w-3xl space-y-6">
       <section className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold text-slate-900">Send Assessment Request</h2>
-        <p className="text-sm text-slate-500">Select a student and test to create a Requested workflow item.</p>
+        <p className="text-sm text-slate-500">Select a student and test to create a Pending workflow item.</p>
       </section>
 
       <Card className="p-6">

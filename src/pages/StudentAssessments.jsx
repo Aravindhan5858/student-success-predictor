@@ -51,16 +51,14 @@ function StudentAssessments() {
             </td>
             <td className="px-4 py-4">
               <div className="flex flex-wrap gap-2">
-                {request.status === 'Requested' ? (
+                {request.status === 'Pending' ? (
                   <Button fullWidth={false} variant="outline" className="px-3 py-2 text-xs" onClick={() => handleAccept(request._id)}>
                     Accept
                   </Button>
                 ) : null}
-                {(request.status === 'Accepted' || request.status === 'In Progress' || request.status === 'Submitted' || request.status === 'Evaluated' || request.status === 'Published') && request.assessmentId ? (
+                {(request.status === 'Accepted' || request.status === 'In Progress') && request.assessmentId ? (
                   <Link to={`/student/take-assessment/${request.assessmentId}?requestId=${encodeURIComponent(request._id)}`}>
-                    <Button fullWidth={false} className="px-3 py-2 text-xs">
-                      {request.status === 'Submitted' || request.status === 'Evaluated' || request.status === 'Published' ? 'Review Test' : request.status === 'In Progress' ? 'Continue Test' : 'Start Test'}
-                    </Button>
+                    <Button fullWidth={false} className="px-3 py-2 text-xs">Start Assessment</Button>
                   </Link>
                 ) : null}
               </div>

@@ -78,16 +78,18 @@ async function loadInterviewRequest(requestId) {
   return WorkflowRequest.findById(requestId)
 }
 
-function buildInterviewResultPayload({ technicalScore = 0, communication = 0, confidence = 0, remarks = '', feedback = '' } = {}) {
-  const safeTechnical = Math.max(0, Math.min(100, Number(technicalScore || 0)))
+function buildInterviewResultPayload({ technical = null, technicalScore = 0, communication = 0, confidence = 0, remarks = '', feedback = '' } = {}) {
+  const safeTechnical = Math.max(0, Math.min(100, Number((technical ?? technicalScore) || 0)))
   const safeCommunication = Math.max(0, Math.min(100, Number(communication || 0)))
   const safeConfidence = Math.max(0, Math.min(100, Number(confidence || 0)))
   const overallScore = Math.round((safeTechnical + safeCommunication + safeConfidence) / 3)
 
   return {
+    technical: safeTechnical,
     technicalScore: safeTechnical,
     communication: safeCommunication,
     confidence: safeConfidence,
+    overall: overallScore,
     overallScore,
     remarks,
     feedback,
@@ -151,6 +153,10 @@ app.put('/api/interview/:id/accept', async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Interview request not found' })
     }
 
+    if (request.status !== 'Pending') {
+      return res.status(409).json({ ok: false, message: 'Only Pending interview requests can be accepted' })
+    }
+
     const updated = await WorkflowRequest.findByIdAndUpdate(
       req.params.id,
       { status: 'Accepted', acceptedAt: new Date() },
@@ -170,6 +176,10 @@ app.put('/api/interview/:id/complete', async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Interview request not found' })
     }
 
+    if (request.status !== 'Accepted' && request.status !== 'Completed') {
+      return res.status(409).json({ ok: false, message: 'Only Accepted interviews can be marked as Completed' })
+    }
+
     const updates = {
       status: 'Completed',
       completedAt: new Date(),
@@ -187,6 +197,14 @@ app.post('/api/interview/:id/result', async (req, res) => {
     const request = await loadInterviewRequest(req.params.id)
     if (!request || request.type !== 'interview') {
       return res.status(404).json({ ok: false, message: 'Interview request not found' })
+    }
+
+    if (request.status === 'Published') {
+      return res.status(409).json({ ok: false, message: 'Published interview result cannot be edited' })
+    }
+
+    if (request.status !== 'Accepted' && request.status !== 'Completed') {
+      return res.status(409).json({ ok: false, message: 'Interview must be Accepted before saving result' })
     }
 
     const resultPayload = buildInterviewResultPayload(req.body)
@@ -217,7 +235,12 @@ app.put('/api/interview/:id/publish', async (req, res) => {
       return res.status(404).json({ ok: false, message: 'Interview request not found' })
     }
 
+    if (request.status !== 'Completed' && request.status !== 'Published') {
+      return res.status(409).json({ ok: false, message: 'Only Completed interview results can be published' })
+    }
+
     const mergedPayload = buildInterviewResultPayload({
+      technical: req.body?.technical ?? request.result?.technical,
       technicalScore: req.body?.technicalScore ?? request.result?.technicalScore,
       communication: req.body?.communication ?? request.result?.communication,
       confidence: req.body?.confidence ?? request.result?.confidence,
@@ -281,7 +304,7 @@ app.post('/api/request/assessment', async (req, res) => {
       assessmentId: String(assessmentId),
       assessmentTitle: title,
       scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-        status: 'Requested',
+      status: 'Pending',
       requestDate: new Date(),
     })
 
@@ -390,7 +413,7 @@ app.post('/api/assessment/request', async (req, res) => {
       assessmentId: String(assessment._id),
       assessmentTitle: title || assessmentTitle || assessment.title,
       scheduledDate: scheduledDate ? new Date(scheduledDate) : null,
-      status: 'Requested',
+      status: 'Pending',
       requestDate: new Date(),
     })
 
@@ -403,8 +426,12 @@ app.post('/api/assessment/request', async (req, res) => {
 app.put('/api/assessment/:id/accept', async (req, res) => {
   try {
     const request = await loadAssessmentRequest(req.params.id)
-    if (!request) {
+    if (!request || request.type !== 'assessment') {
       return res.status(404).json({ ok: false, message: 'Assessment request not found' })
+    }
+
+    if (request.status !== 'Pending') {
+      return res.status(409).json({ ok: false, message: 'Only Pending assessment requests can be accepted' })
     }
 
     const updated = await WorkflowRequest.findByIdAndUpdate(
@@ -421,25 +448,20 @@ app.put('/api/assessment/:id/accept', async (req, res) => {
 
 app.put('/api/assessment/:id/submit', async (req, res) => {
   try {
-    const { status = 'Submitted', answers = [] } = req.body
+    const { answers = [] } = req.body
     const request = await loadAssessmentRequest(req.params.id)
-    if (!request) {
+    if (!request || request.type !== 'assessment') {
       return res.status(404).json({ ok: false, message: 'Assessment request not found' })
     }
 
-    const allowed = ['In Progress', 'Submitted']
-    const nextStatus = allowed.includes(status) ? status : 'Submitted'
+    if (request.status !== 'In Progress' && request.status !== 'Submitted') {
+      return res.status(409).json({ ok: false, message: 'Assessment must be In Progress before submission' })
+    }
+
     const updates = {
-      status: nextStatus,
+      status: 'Submitted',
       answers: Array.isArray(answers) ? answers : [],
-    }
-
-    if (nextStatus === 'In Progress') {
-      updates.startedAt = new Date()
-    }
-
-    if (nextStatus === 'Submitted') {
-      updates.submittedAt = new Date()
+      submittedAt: new Date(),
     }
 
     const updated = await WorkflowRequest.findByIdAndUpdate(req.params.id, updates, { new: true })
@@ -449,12 +471,39 @@ app.put('/api/assessment/:id/submit', async (req, res) => {
   }
 })
 
+app.put('/api/assessment/:id/start', async (req, res) => {
+  try {
+    const request = await loadAssessmentRequest(req.params.id)
+    if (!request || request.type !== 'assessment') {
+      return res.status(404).json({ ok: false, message: 'Assessment request not found' })
+    }
+
+    if (request.status !== 'Accepted' && request.status !== 'In Progress') {
+      return res.status(409).json({ ok: false, message: 'Only Accepted assessments can be started' })
+    }
+
+    const updates = {
+      status: 'In Progress',
+      startedAt: request.startedAt || new Date(),
+    }
+
+    const updated = await WorkflowRequest.findByIdAndUpdate(req.params.id, updates, { new: true })
+    return res.json({ ok: true, request: updated })
+  } catch (error) {
+    return res.status(500).json({ ok: false, message: error.message || 'Failed to start assessment' })
+  }
+})
+
 app.post('/api/assessment/:id/evaluate', async (req, res) => {
   try {
     const { evaluation = [], score = 0, percentage = null, resultStatus = '', feedback = '' } = req.body
     const request = await loadAssessmentRequest(req.params.id)
-    if (!request) {
+    if (!request || request.type !== 'assessment') {
       return res.status(404).json({ ok: false, message: 'Assessment request not found' })
+    }
+
+    if (request.status !== 'Submitted' && request.status !== 'Evaluated') {
+      return res.status(409).json({ ok: false, message: 'Only Submitted assessments can be evaluated' })
     }
 
     const summary = buildEvaluationSummary(evaluation, score)
@@ -480,12 +529,16 @@ app.post('/api/assessment/:id/evaluate', async (req, res) => {
   }
 })
 
-app.post('/api/assessment/:id/publish', async (req, res) => {
+const publishAssessmentResultHandler = async (req, res) => {
   try {
     const { score = 0, percentage = 0, resultStatus = '', feedback = '' } = req.body
     const request = await loadAssessmentRequest(req.params.id)
-    if (!request) {
+    if (!request || request.type !== 'assessment') {
       return res.status(404).json({ ok: false, message: 'Assessment request not found' })
+    }
+
+    if (request.status !== 'Evaluated' && request.status !== 'Published') {
+      return res.status(409).json({ ok: false, message: 'Only Evaluated assessments can be published' })
     }
 
     const updated = await WorkflowRequest.findByIdAndUpdate(
@@ -505,7 +558,10 @@ app.post('/api/assessment/:id/publish', async (req, res) => {
   } catch (error) {
     return res.status(500).json({ ok: false, message: error.message || 'Failed to publish assessment result' })
   }
-})
+}
+
+app.put('/api/assessment/:id/publish', publishAssessmentResultHandler)
+app.post('/api/assessment/:id/publish', publishAssessmentResultHandler)
 
 app.post('/api/interview/result', async (req, res) => {
   try {

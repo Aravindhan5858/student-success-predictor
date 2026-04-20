@@ -195,6 +195,14 @@ function App() {
           }
         />
         <Route
+          path="/admin/publish/:id"
+          element={
+            <RoleRoute allowedRoles={['admin']}>
+              <AdminPublishResult />
+            </RoleRoute>
+          }
+        />
+        <Route
           path="/admin/publish-result/:id"
           element={
             <RoleRoute allowedRoles={['admin']}>

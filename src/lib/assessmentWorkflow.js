@@ -1,8 +1,9 @@
 export const ASSESSMENT_STATUS_TONES = {
+  Pending: 'medium',
   Requested: 'medium',
   Accepted: 'neutral',
   'In Progress': 'orange',
-  Submitted: 'orange',
+  Submitted: 'purple',
   Evaluated: 'purple',
   Published: 'low',
 }
@@ -25,10 +26,10 @@ export function getAssessmentResultTone(resultStatus) {
 export function normalizeAssessmentStatus(status) {
   const value = String(status || '')
   if (!value) {
-    return 'Requested'
+    return 'Pending'
   }
-  if (value === 'Pending') {
-    return 'Requested'
+  if (value === 'Requested') {
+    return 'Pending'
   }
   return value
 }

@@ -10,7 +10,7 @@ function TakeAssessment() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const requestId = searchParams.get('requestId') || ''
-  const { currentStudent, getAssessmentById, submitAssessmentAttempt, studentAssessmentRequests, loadStudentAssessments } = useAppContext()
+  const { currentStudent, getAssessmentById, startAssessmentRequest, submitAssessmentAttempt, studentAssessmentRequests, loadStudentAssessments } = useAppContext()
   const [assessment, setAssessment] = useState(null)
   const [request, setRequest] = useState(null)
   const [answers, setAnswers] = useState([])
@@ -54,7 +54,7 @@ function TakeAssessment() {
     setRequest(activeRequest)
     if (activeRequest.status === 'Accepted' && !startedRef.current && requestId) {
       startedRef.current = true
-      submitAssessmentAttempt({ requestId, status: 'In Progress' })
+      startAssessmentRequest(requestId)
       setRequest((previous) => (previous ? { ...previous, status: 'In Progress' } : previous))
     }
   }, [activeRequest, requestId])
@@ -78,7 +78,7 @@ function TakeAssessment() {
       return
     }
 
-    const result = await submitAssessmentAttempt({ requestId, answers, status: 'Submitted' })
+    const result = await submitAssessmentAttempt({ requestId, answers })
 
     if (!result.ok) {
       setError(result.message)
@@ -149,7 +149,12 @@ function TakeAssessment() {
           {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
 
           <div className="flex justify-end">
-            <Button type="submit" fullWidth={false} className="px-6" disabled={Boolean(activeRequest && ['Submitted', 'Evaluated', 'Published'].includes(activeRequest.status))}>
+            <Button
+              type="submit"
+              fullWidth={false}
+              className="px-6"
+              disabled={Boolean(!activeRequest || !['Accepted', 'In Progress'].includes(activeRequest.status) || ['Submitted', 'Evaluated', 'Published'].includes(activeRequest.status))}
+            >
               Submit Assessment
             </Button>
           </div>

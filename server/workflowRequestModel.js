@@ -47,9 +47,11 @@ const workflowRequestSchema = new mongoose.Schema(
     resultStatus: { type: String, default: '' },
     feedback: { type: String, default: '' },
     result: {
+      technical: { type: Number, default: 0 },
       technicalScore: { type: Number, default: 0 },
       communication: { type: Number, default: 0 },
       confidence: { type: Number, default: 0 },
+      overall: { type: Number, default: 0 },
       overallScore: { type: Number, default: 0 },
       score: { type: Number, default: 0 },
       percentage: { type: Number, default: 0 },

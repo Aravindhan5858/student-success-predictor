@@ -22,7 +22,7 @@ function AdminAssessmentRequests() {
     <div className="space-y-6">
       <section className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold text-slate-900">Assessment Requests</h2>
-        <p className="text-sm text-slate-500">Live tracking for Requested, Accepted, Submitted, Evaluated and Published states.</p>
+        <p className="text-sm text-slate-500">Live tracking for Pending, Accepted, Submitted, Evaluated and Published states.</p>
       </section>
 
       <Table headers={['Student', 'Test', 'Status', 'Score', 'Percentage', 'Actions']}>
@@ -43,7 +43,7 @@ function AdminAssessmentRequests() {
                   </Link>
                 ) : null}
                 {request.status === 'Evaluated' ? (
-                  <Link to={`/admin/publish-result/${request._id}`}>
+                  <Link to={`/admin/publish/${request._id}`}>
                     <Button fullWidth={false} className="px-3 py-2 text-xs">Publish</Button>
                   </Link>
                 ) : null}
