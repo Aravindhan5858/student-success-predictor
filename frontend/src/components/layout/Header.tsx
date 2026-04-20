@@ -2,18 +2,21 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/authStore';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { getRoleBadgeColor } from '@/lib/utils';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, Moon, Sun, User } from 'lucide-react';
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
 
 export default function Header() {
   const { user } = useAuthStore();
   const { logout } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   if (!user) return null;
 
@@ -21,12 +24,21 @@ export default function Header() {
 
   return (
     <header className="h-16 border-b bg-background flex items-center justify-between px-6 sticky top-0 z-30">
-      <div className="md:hidden" /> {/* spacer for mobile menu button */}
+      <div className="md:hidden" />
       <h1 className="text-sm font-semibold text-muted-foreground hidden md:block">
         {process.env.NEXT_PUBLIC_APP_NAME || 'Student Success Predictor'}
       </h1>
       <div className="flex items-center gap-3 ml-auto">
         <Badge className={getRoleBadgeColor(user.role)}>{user.role}</Badge>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="transition-colors duration-200"
+          aria-label="Toggle theme"
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="rounded-full focus:outline-none focus:ring-2 focus:ring-ring">

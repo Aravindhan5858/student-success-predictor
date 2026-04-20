@@ -31,6 +31,10 @@ class ProfileOut(BaseModel):
     github: Optional[str] = None
     linkedin: Optional[str] = None
     portfolio: Optional[str] = None
+    education: list = []
+    experience: list = []
+    projects: list = []
+    certifications: list = []
     updated_at: datetime
 
     class Config:
@@ -43,6 +47,10 @@ class ProfileUpdate(BaseModel):
     github: Optional[str] = None
     linkedin: Optional[str] = None
     portfolio: Optional[str] = None
+    education: Optional[list] = None
+    experience: Optional[list] = None
+    projects: Optional[list] = None
+    certifications: Optional[list] = None
 
 
 class SkillOut(BaseModel):

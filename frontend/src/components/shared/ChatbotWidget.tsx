@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send } from "lucide-react";
+import { MessageCircle, X, Send, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/authStore";
@@ -23,11 +23,31 @@ export default function ChatbotWidget() {
   const [isLoading, setIsLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  // Load history on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("chatbot_history");
+      if (saved) setMessages(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  // Save history on change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem("chatbot_history", JSON.stringify(messages.slice(-50)));
+    }
+  }, [messages]);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
   if (!isAuthenticated) return null;
+
+  const clearHistory = () => {
+    setMessages([]);
+    localStorage.removeItem("chatbot_history");
+  };
 
   async function sendMessage(text: string) {
     if (!text.trim() || isLoading) return;
@@ -48,10 +68,7 @@ export default function ChatbotWidget() {
     } catch {
       setMessages((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, something went wrong. Please try again.",
-        },
+        { role: "assistant", content: "Sorry, something went wrong. Please try again." },
       ]);
     } finally {
       setIsLoading(false);
@@ -68,12 +85,20 @@ export default function ChatbotWidget() {
               <MessageCircle className="h-4 w-4" />
               AI Assistant
             </div>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="hover:opacity-70"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearHistory}
+                className="h-7 w-7 p-0 hover:bg-primary-foreground/20 text-primary-foreground"
+                title="Clear history"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+              <button onClick={() => setIsOpen(false)} className="hover:opacity-70 ml-1">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -107,7 +132,9 @@ export default function ChatbotWidget() {
                         li: ({ node, ...props }) => <li className="mb-0.5" {...props} />,
                         strong: ({ node, ...props }) => <strong className="font-semibold" {...props} />,
                         em: ({ node, ...props }) => <em className="italic" {...props} />,
-                        code: ({ node, ...props }) => <code className="bg-black/20 px-1.5 py-0.5 rounded text-xs font-mono" {...props} />,
+                        code: ({ node, ...props }) => (
+                          <code className="bg-black/20 px-1.5 py-0.5 rounded text-xs font-mono" {...props} />
+                        ),
                       }}
                     >
                       {msg.content}
@@ -184,11 +211,7 @@ export default function ChatbotWidget() {
         onClick={() => setIsOpen((o) => !o)}
         className="fixed bottom-4 right-4 z-50 w-12 h-12 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
       >
-        {isOpen ? (
-          <X className="h-5 w-5" />
-        ) : (
-          <MessageCircle className="h-5 w-5" />
-        )}
+        {isOpen ? <X className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
       </button>
     </>
   );

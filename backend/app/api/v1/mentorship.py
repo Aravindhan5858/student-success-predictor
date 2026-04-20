@@ -13,6 +13,16 @@ router = APIRouter()
 
 
 # --- Schemas ---
+class UserBrief(BaseModel):
+    id: uuid.UUID
+    full_name: str
+    email: str
+    role: str
+
+    class Config:
+        from_attributes = True
+
+
 class MentorshipRequestIn(BaseModel):
     to_user_id: uuid.UUID
     message: Optional[str] = None
@@ -26,6 +36,7 @@ class MentorshipRequestOut(BaseModel):
     status: str
     message: Optional[str]
     created_at: datetime
+    sender: Optional[UserBrief] = None
 
     class Config:
         from_attributes = True
@@ -37,6 +48,8 @@ class MentorshipOut(BaseModel):
     professor_id: uuid.UUID
     status: str
     started_at: datetime
+    mentor: Optional[UserBrief] = None
+    mentee: Optional[UserBrief] = None
 
     class Config:
         from_attributes = True
@@ -66,7 +79,7 @@ def list_requests(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    return (
+    reqs = (
         db.query(MentorshipRequest)
         .filter(
             MentorshipRequest.to_user_id == current_user.id,
@@ -74,6 +87,14 @@ def list_requests(
         )
         .all()
     )
+    result = []
+    for req in reqs:
+        sender = db.query(User).filter(User.id == req.from_user_id).first()
+        out = MentorshipRequestOut.model_validate(req)
+        if sender:
+            out.sender = UserBrief(id=sender.id, full_name=sender.full_name, email=sender.email, role=sender.role.value)
+        result.append(out)
+    return result
 
 
 @router.post("/mentorship/{request_id}/approve", response_model=MentorshipOut)
@@ -128,7 +149,7 @@ def list_mentorships(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    return (
+    mentorships = (
         db.query(Mentorship)
         .filter(
             (Mentorship.student_id == current_user.id) | (Mentorship.professor_id == current_user.id),
@@ -136,6 +157,17 @@ def list_mentorships(
         )
         .all()
     )
+    result = []
+    for m in mentorships:
+        professor = db.query(User).filter(User.id == m.professor_id).first()
+        student = db.query(User).filter(User.id == m.student_id).first()
+        out = MentorshipOut.model_validate(m)
+        if professor:
+            out.mentor = UserBrief(id=professor.id, full_name=professor.full_name, email=professor.email, role=professor.role.value)
+        if student:
+            out.mentee = UserBrief(id=student.id, full_name=student.full_name, email=student.email, role=student.role.value)
+        result.append(out)
+    return result
 
 
 @router.delete("/mentorships/{mentorship_id}", status_code=204)

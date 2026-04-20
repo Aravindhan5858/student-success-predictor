@@ -66,6 +66,23 @@ class SuspendIn(BaseModel):
     hours: int = 24
 
 
+@router.get("/search", response_model=list[UserResponse])
+def search_users(
+    q: str = Query(..., min_length=1),
+    role: Optional[UserRole] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_active_user),
+):
+    """Search users by name or email. Used for mentorship dropdowns."""
+    query = db.query(User).filter(User.is_active == True)
+    if role:
+        query = query.filter(User.role == role)
+    query = query.filter(
+        (User.full_name.ilike(f"%{q}%")) | (User.email.ilike(f"%{q}%"))
+    )
+    return query.limit(10).all()
+
+
 @router.post("/{user_id}/suspend", dependencies=[Depends(_admin)])
 def suspend_user(user_id: uuid.UUID, data: SuspendIn, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
     user = db.query(User).filter(User.id == user_id).first()

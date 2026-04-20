@@ -29,6 +29,7 @@
     "lucide-react": "^0.395.0",
     "next": "^16.2.4",
     "next-pwa": "^2.0.2",
+    "next-themes": "^0.3.0",
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.51.5",

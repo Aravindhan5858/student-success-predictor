@@ -17,6 +17,10 @@ class Profile(Base):
     github: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     linkedin: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     portfolio: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    education: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
+    experience: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
+    projects: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
+    certifications: Mapped[list] = mapped_column(JSONB, nullable=False, server_default="[]")
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=text("now()"), nullable=False)
 
 

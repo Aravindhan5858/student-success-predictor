@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MessageSquare, ThumbsUp, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { MessageSquare, ThumbsUp, ChevronLeft, ChevronRight, Plus, X, HelpCircle } from 'lucide-react';
 import api from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ interface Question {
   tags: string[];
   vote_count: number;
   answer_count: number;
+  is_closed?: boolean;
   author: { full_name: string };
   created_at: string;
 }
@@ -30,6 +31,17 @@ interface PaginatedQuestions {
 }
 
 const POPULAR_TAGS = ['python', 'javascript', 'algorithms', 'career', 'interview', 'ml'];
+
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500',
+  'bg-pink-500', 'bg-teal-500', 'bg-red-500', 'bg-indigo-500',
+];
+
+function avatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
 
 export default function CommunityPage() {
   const router = useRouter();
@@ -125,7 +137,7 @@ export default function CommunityPage() {
                   : 'bg-muted/50 hover:bg-muted border-transparent'
               }`}
             >
-              {tag}
+              #{tag}
               {activeTag === tag && <X className="inline h-3 w-3 ml-1" />}
             </button>
           ))}
@@ -138,34 +150,81 @@ export default function CommunityPage() {
       ) : (
         <div className="space-y-3">
           {data?.items?.length === 0 && (
-            <p className="text-muted-foreground text-sm py-8 text-center">No questions found</p>
+            <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center">
+                <HelpCircle className="h-7 w-7 text-muted-foreground" />
+              </div>
+              <div>
+                <p className="font-medium">No questions found</p>
+                <p className="text-sm text-muted-foreground mt-1">Be the first to ask something!</p>
+              </div>
+              <Button size="sm" onClick={() => setAskOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Ask a Question
+              </Button>
+            </div>
           )}
-          {data?.items?.map((q) => (
-            <div
-              key={q.id}
-              onClick={() => router.push(`/community/${q.id}`)}
-              className="bg-card border rounded-lg p-4 cursor-pointer hover:border-primary/50 transition-colors"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-sm leading-snug mb-1 truncate">{q.title}</h3>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{q.body}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {q.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
-                    ))}
+          {data?.items?.map((q) => {
+            const authorName = q.author?.full_name ?? '?';
+            return (
+              <div
+                key={q.id}
+                onClick={() => router.push(`/community/${q.id}`)}
+                className="bg-card border rounded-lg p-4 cursor-pointer hover:border-primary/50 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-medium text-sm leading-snug truncate">{q.title}</h3>
+                      <Badge
+                        variant={q.is_closed ? 'secondary' : 'outline'}
+                        className={`shrink-0 text-xs ${q.is_closed ? '' : 'border-green-500 text-green-600'}`}
+                      >
+                        {q.is_closed ? 'closed' : 'open'}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{q.body}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {q.tags.map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={(e) => { e.stopPropagation(); toggleTag(tag); }}
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                            activeTag === tag
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-muted/60 hover:bg-muted border-transparent text-muted-foreground'
+                          }`}
+                        >
+                          #{tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {/* Stat pills */}
+                  <div className="flex flex-col items-end gap-1.5 shrink-0">
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs font-medium">
+                      <ThumbsUp className="h-3 w-3" />{q.vote_count}
+                    </span>
+                    <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted text-xs font-medium">
+                      <MessageSquare className="h-3 w-3" />{q.answer_count}
+                    </span>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1 text-xs text-muted-foreground shrink-0">
-                  <div className="flex items-center gap-1"><ThumbsUp className="h-3 w-3" />{q.vote_count}</div>
-                  <div className="flex items-center gap-1"><MessageSquare className="h-3 w-3" />{q.answer_count}</div>
+                {/* Footer row */}
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${avatarColor(authorName)}`}>
+                    {authorName[0].toUpperCase()}
+                  </span>
+                  <span>asked by <span className="font-medium text-foreground">{authorName}</span></span>
+                  <span>·</span>
+                  <span>{q.answer_count} answer{q.answer_count !== 1 ? 's' : ''}</span>
+                  <span>·</span>
+                  <span>{q.vote_count} vote{q.vote_count !== 1 ? 's' : ''}</span>
+                  <span>·</span>
+                  <span>{new Date(q.created_at).toLocaleDateString()}</span>
                 </div>
               </div>
-              <div className="mt-2 text-xs text-muted-foreground">
-                {q.author?.full_name} · {new Date(q.created_at).toLocaleDateString()}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

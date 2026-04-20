@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronUp, ChevronDown, CheckCircle, Trash2, ArrowLeft } from 'lucide-react';
+import { ChevronUp, ChevronDown, CheckCircle, Trash2, ArrowLeft, MessageSquarePlus } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,25 @@ interface QuestionDetail {
   author: Author;
   created_at: string;
   answers: Answer[];
+}
+
+const AVATAR_COLORS = [
+  'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500',
+  'bg-pink-500', 'bg-teal-500', 'bg-red-500', 'bg-indigo-500',
+];
+
+function avatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function Avatar({ name }: { name: string }) {
+  return (
+    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${avatarColor(name)}`}>
+      {name[0].toUpperCase()}
+    </span>
+  );
 }
 
 export default function QuestionDetailPage() {
@@ -118,6 +137,12 @@ export default function QuestionDetailPage() {
   if (loading) return <LoadingSpinner />;
   if (!question) return <p className="text-muted-foreground">Question not found.</p>;
 
+  // Sort: accepted first, then by votes descending
+  const sortedAnswers = [...question.answers].sort((a, b) => {
+    if (a.is_accepted !== b.is_accepted) return a.is_accepted ? -1 : 1;
+    return b.vote_count - a.vote_count;
+  });
+
   return (
     <div className="space-y-6 max-w-3xl">
       <Button variant="ghost" size="sm" onClick={() => router.push('/community')}>
@@ -136,12 +161,13 @@ export default function QuestionDetailPage() {
         </div>
         <p className="text-sm text-muted-foreground whitespace-pre-wrap">{question.body}</p>
         <div className="flex flex-wrap gap-1">
-          {question.tags.map((tag) => <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>)}
+          {question.tags.map((tag) => <Badge key={tag} variant="secondary" className="text-xs">#{tag}</Badge>)}
         </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
-          <span className="flex items-center gap-1"><ChevronUp className="h-3 w-3" />{question.vote_count} votes</span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+          <Avatar name={question.author?.full_name ?? '?'} />
+          <span className="font-medium text-foreground">{question.author?.full_name}</span>
           <span>·</span>
-          <span>{question.author?.full_name}</span>
+          <span>{question.vote_count} votes</span>
           <span>·</span>
           <span>{new Date(question.created_at).toLocaleDateString()}</span>
         </div>
@@ -150,60 +176,98 @@ export default function QuestionDetailPage() {
       {/* Answers */}
       <div className="space-y-3">
         <h3 className="font-semibold">{question.answers.length} Answer{question.answers.length !== 1 ? 's' : ''}</h3>
-        {question.answers.map((answer) => (
-          <div key={answer.id} className={`bg-card border rounded-lg p-4 ${answer.is_accepted ? 'border-green-500/50' : ''}`}>
-            <div className="flex gap-4">
-              {/* Vote controls */}
-              <div className="flex flex-col items-center gap-1 shrink-0">
-                <button onClick={() => vote(answer.id, 1)} className="p-1 rounded hover:bg-muted">
-                  <ChevronUp className="h-4 w-4" />
-                </button>
-                <span className="text-sm font-medium">{answer.vote_count}</span>
-                <button onClick={() => vote(answer.id, -1)} className="p-1 rounded hover:bg-muted">
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-              </div>
-              {/* Body */}
-              <div className="flex-1 min-w-0 space-y-2">
-                {answer.is_accepted && (
-                  <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
-                    <CheckCircle className="h-4 w-4" /> Accepted Answer
-                  </div>
-                )}
-                <p className="text-sm whitespace-pre-wrap">{answer.body}</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    {answer.author?.full_name} · {new Date(answer.created_at).toLocaleDateString()}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {isAuthor && !answer.is_accepted && (
-                      <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50 h-7 text-xs" onClick={() => accept(answer.id)}>
-                        Accept
-                      </Button>
-                    )}
-                    {isModerator && (
-                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7" onClick={() => deleteAnswer(answer.id)}>
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    )}
+
+        {sortedAnswers.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-12 text-center space-y-3 border rounded-lg bg-card">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+              <MessageSquarePlus className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="font-medium">No answers yet</p>
+              <p className="text-sm text-muted-foreground mt-1">Be the first to help!</p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => document.getElementById('answer-textarea')?.focus()}>
+              Write an Answer
+            </Button>
+          </div>
+        )}
+
+        {sortedAnswers.map((answer) => {
+          const authorName = answer.author?.full_name ?? '?';
+          return (
+            <div
+              key={answer.id}
+              className={`bg-card border rounded-lg p-4 ${answer.is_accepted ? 'border-l-4 border-l-green-500' : ''}`}
+            >
+              <div className="flex gap-4">
+                {/* Vote controls */}
+                <div className="flex flex-col items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => vote(answer.id, 1)}
+                    className="p-1.5 rounded-md hover:bg-green-100 hover:text-green-700 dark:hover:bg-green-900/30 dark:hover:text-green-400 transition-colors"
+                  >
+                    <ChevronUp className="h-5 w-5" />
+                  </button>
+                  <span className="text-sm font-semibold min-w-[1.5rem] text-center">{answer.vote_count}</span>
+                  <button
+                    onClick={() => vote(answer.id, -1)}
+                    className="p-1.5 rounded-md hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-400 transition-colors"
+                  >
+                    <ChevronDown className="h-5 w-5" />
+                  </button>
+                </div>
+                {/* Body */}
+                <div className="flex-1 min-w-0 space-y-2">
+                  {answer.is_accepted && (
+                    <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                      <CheckCircle className="h-4 w-4" /> Accepted Answer
+                    </div>
+                  )}
+                  <p className="text-sm whitespace-pre-wrap">{answer.body}</p>
+                  <div className="flex items-center justify-between pt-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Avatar name={authorName} />
+                      <span className="font-medium text-foreground">{authorName}</span>
+                      <span>·</span>
+                      <span>{new Date(answer.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isAuthor && !answer.is_accepted && (
+                        <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 h-7 text-xs" onClick={() => accept(answer.id)}>
+                          Accept
+                        </Button>
+                      )}
+                      {isModerator && (
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7" onClick={() => deleteAnswer(answer.id)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Post Answer */}
       <div className="bg-card border rounded-lg p-6 space-y-3">
         <h3 className="font-semibold">Your Answer</h3>
-        <textarea
-          rows={5}
-          placeholder="Write your answer..."
-          value={answerBody}
-          onChange={(e) => setAnswerBody(e.target.value)}
-          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
-        />
+        <div className="relative">
+          <textarea
+            id="answer-textarea"
+            rows={6}
+            placeholder="Write your answer... (supports plain text)"
+            value={answerBody}
+            onChange={(e) => setAnswerBody(e.target.value)}
+            maxLength={5000}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none transition-shadow"
+          />
+          <span className={`absolute bottom-2 right-3 text-xs ${answerBody.length > 4500 ? 'text-destructive' : 'text-muted-foreground'}`}>
+            {answerBody.length}/5000
+          </span>
+        </div>
         <Button onClick={postAnswer} disabled={submitting || !answerBody.trim()}>
           {submitting ? 'Posting...' : 'Post Answer'}
         </Button>

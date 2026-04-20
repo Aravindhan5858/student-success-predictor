@@ -43,7 +43,10 @@ api.interceptors.response.use(
       isRefreshing = true;
       const refreshToken = typeof window !== 'undefined' ? localStorage.getItem('refresh_token') : null;
       if (!refreshToken) {
-        if (typeof window !== 'undefined') window.location.href = '/login';
+        // Don't hard-redirect on background/prefetch calls — let the component handle it
+        const url = original.url ?? '';
+        const isSilent = url.includes('/auth/me') || url.includes('/students/me');
+        if (typeof window !== 'undefined' && !isSilent) window.location.href = '/login';
         return Promise.reject(error);
       }
       try {
