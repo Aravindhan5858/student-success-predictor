@@ -1,6 +1,8 @@
 import uuid
+from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.api.deps import get_db, get_current_active_user, require_admin
 from app.models.user import User, UserRole
@@ -57,3 +59,32 @@ def delete_user(user_id: uuid.UUID, db: Session = Depends(get_db), _: User = Dep
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     soft_delete_user(db, user)
+
+
+class SuspendIn(BaseModel):
+    reason: str
+    hours: int = 24
+
+
+@router.post("/{user_id}/suspend", dependencies=[Depends(_admin)])
+def suspend_user(user_id: uuid.UUID, data: SuspendIn, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.status = "suspended"
+    user.suspension_reason = data.reason
+    user.suspended_until = datetime.utcnow() + timedelta(hours=data.hours)
+    db.commit()
+    return {"status": "suspended", "until": user.suspended_until}
+
+
+@router.post("/{user_id}/unsuspend", dependencies=[Depends(_admin)])
+def unsuspend_user(user_id: uuid.UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_user)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    user.status = "active"
+    user.suspension_reason = None
+    user.suspended_until = None
+    db.commit()
+    return {"status": "active"}

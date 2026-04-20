@@ -32,3 +32,9 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
 require_admin = RoleChecker([UserRole.admin])
 require_professor = RoleChecker([UserRole.professor, UserRole.admin])
 require_student = RoleChecker([UserRole.student])
+
+
+def check_not_suspended(current_user: User = Depends(get_current_active_user)) -> User:
+    if getattr(current_user, "status", None) == "suspended":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account suspended")
+    return current_user

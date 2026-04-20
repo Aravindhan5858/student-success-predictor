@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
 
+    GEMINI_API_KEY: str = ""
+
     @computed_field
     @property
     def cloudinary_url(self) -> str:

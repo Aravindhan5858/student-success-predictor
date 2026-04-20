@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api.v1 import auth, users, students, academic, assessments, interviews, analytics, files
+from app.api.v1 import profile, community, mentorship, mock_test, chatbot
 
 router = APIRouter()
 
@@ -11,3 +12,8 @@ router.include_router(assessments.router, prefix="/assessments", tags=["assessme
 router.include_router(interviews.router, prefix="/interviews", tags=["interviews"])
 router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 router.include_router(files.router, prefix="/files", tags=["files"])
+router.include_router(profile.router, tags=["profile"])
+router.include_router(community.router, tags=["community"])
+router.include_router(mentorship.router, tags=["mentorship"])
+router.include_router(mock_test.router, tags=["mock-test"])
+router.include_router(chatbot.router, tags=["chatbot"])
