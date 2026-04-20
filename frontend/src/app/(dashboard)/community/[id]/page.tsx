@@ -1,0 +1,213 @@
+'use client';
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { ChevronUp, ChevronDown, CheckCircle, Trash2, ArrowLeft } from 'lucide-react';
+import api from '@/lib/api';
+import { useAuthStore } from '@/store/authStore';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import LoadingSpinner from '@/components/shared/LoadingSpinner';
+
+interface Author { id: number; full_name: string }
+interface Answer {
+  id: string;
+  body: string;
+  author: Author;
+  vote_count: number;
+  is_accepted: boolean;
+  created_at: string;
+}
+interface QuestionDetail {
+  id: string;
+  title: string;
+  body: string;
+  tags: string[];
+  vote_count: number;
+  author: Author;
+  created_at: string;
+  answers: Answer[];
+}
+
+export default function QuestionDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const { user } = useAuthStore();
+  const { toast } = useToast();
+
+  const [question, setQuestion] = useState<QuestionDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [answerBody, setAnswerBody] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const isModerator = user?.role === 'professor' || user?.role === 'admin';
+  const isAuthor = question?.author?.id === user?.id;
+
+  const load = async () => {
+    try {
+      const { data } = await api.get(`/questions/${id}`);
+      setQuestion(data);
+    } catch {
+      toast({ title: 'Failed to load question', variant: 'destructive' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const vote = async (answerId: string, value: 1 | -1) => {
+    try {
+      await api.post(`/answers/${answerId}/vote`, { value });
+      setQuestion((q) => q ? {
+        ...q,
+        answers: q.answers.map((a) => a.id === answerId ? { ...a, vote_count: a.vote_count + value } : a),
+      } : q);
+    } catch {
+      toast({ title: 'Failed to vote', variant: 'destructive' });
+    }
+  };
+
+  const accept = async (answerId: string) => {
+    try {
+      await api.post(`/answers/${answerId}/accept`);
+      setQuestion((q) => q ? {
+        ...q,
+        answers: q.answers.map((a) => ({ ...a, is_accepted: a.id === answerId })),
+      } : q);
+    } catch {
+      toast({ title: 'Failed to accept answer', variant: 'destructive' });
+    }
+  };
+
+  const deleteQuestion = async () => {
+    if (!confirm('Delete this question?')) return;
+    try {
+      await api.delete(`/questions/${id}`);
+      router.push('/community');
+    } catch {
+      toast({ title: 'Failed to delete', variant: 'destructive' });
+    }
+  };
+
+  const deleteAnswer = async (answerId: string) => {
+    if (!confirm('Delete this answer?')) return;
+    try {
+      await api.delete(`/answers/${answerId}`);
+      setQuestion((q) => q ? { ...q, answers: q.answers.filter((a) => a.id !== answerId) } : q);
+    } catch {
+      toast({ title: 'Failed to delete', variant: 'destructive' });
+    }
+  };
+
+  const postAnswer = async () => {
+    if (!answerBody.trim()) return;
+    setSubmitting(true);
+    try {
+      const { data } = await api.post(`/questions/${id}/answers`, { body: answerBody });
+      setQuestion((q) => q ? { ...q, answers: [...q.answers, data] } : q);
+      setAnswerBody('');
+      toast({ title: 'Answer posted' });
+    } catch {
+      toast({ title: 'Failed to post answer', variant: 'destructive' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) return <LoadingSpinner />;
+  if (!question) return <p className="text-muted-foreground">Question not found.</p>;
+
+  return (
+    <div className="space-y-6 max-w-3xl">
+      <Button variant="ghost" size="sm" onClick={() => router.push('/community')}>
+        <ArrowLeft className="h-4 w-4 mr-1" /> Back
+      </Button>
+
+      {/* Question */}
+      <div className="bg-card border rounded-lg p-6 space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <h2 className="text-xl font-bold leading-snug">{question.title}</h2>
+          {isModerator && (
+            <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive shrink-0" onClick={deleteQuestion}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{question.body}</p>
+        <div className="flex flex-wrap gap-1">
+          {question.tags.map((tag) => <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>)}
+        </div>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground pt-1">
+          <span className="flex items-center gap-1"><ChevronUp className="h-3 w-3" />{question.vote_count} votes</span>
+          <span>·</span>
+          <span>{question.author?.full_name}</span>
+          <span>·</span>
+          <span>{new Date(question.created_at).toLocaleDateString()}</span>
+        </div>
+      </div>
+
+      {/* Answers */}
+      <div className="space-y-3">
+        <h3 className="font-semibold">{question.answers.length} Answer{question.answers.length !== 1 ? 's' : ''}</h3>
+        {question.answers.map((answer) => (
+          <div key={answer.id} className={`bg-card border rounded-lg p-4 ${answer.is_accepted ? 'border-green-500/50' : ''}`}>
+            <div className="flex gap-4">
+              {/* Vote controls */}
+              <div className="flex flex-col items-center gap-1 shrink-0">
+                <button onClick={() => vote(answer.id, 1)} className="p-1 rounded hover:bg-muted">
+                  <ChevronUp className="h-4 w-4" />
+                </button>
+                <span className="text-sm font-medium">{answer.vote_count}</span>
+                <button onClick={() => vote(answer.id, -1)} className="p-1 rounded hover:bg-muted">
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+              </div>
+              {/* Body */}
+              <div className="flex-1 min-w-0 space-y-2">
+                {answer.is_accepted && (
+                  <div className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                    <CheckCircle className="h-4 w-4" /> Accepted Answer
+                  </div>
+                )}
+                <p className="text-sm whitespace-pre-wrap">{answer.body}</p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    {answer.author?.full_name} · {new Date(answer.created_at).toLocaleDateString()}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {isAuthor && !answer.is_accepted && (
+                      <Button variant="outline" size="sm" className="text-green-600 border-green-600 hover:bg-green-50 h-7 text-xs" onClick={() => accept(answer.id)}>
+                        Accept
+                      </Button>
+                    )}
+                    {isModerator && (
+                      <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive h-7" onClick={() => deleteAnswer(answer.id)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Post Answer */}
+      <div className="bg-card border rounded-lg p-6 space-y-3">
+        <h3 className="font-semibold">Your Answer</h3>
+        <textarea
+          rows={5}
+          placeholder="Write your answer..."
+          value={answerBody}
+          onChange={(e) => setAnswerBody(e.target.value)}
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
+        />
+        <Button onClick={postAnswer} disabled={submitting || !answerBody.trim()}>
+          {submitting ? 'Posting...' : 'Post Answer'}
+        </Button>
+      </div>
+    </div>
+  );
+}

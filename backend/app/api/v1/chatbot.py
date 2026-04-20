@@ -62,7 +62,7 @@ def chat(
     system_prompt = _build_system_prompt(current_user, db)
     try:
         model = genai.GenerativeModel(
-            model_name="gemini-1.5-flash",
+            model_name="gemini-3-flash-preview",
             system_instruction=system_prompt,
         )
         result = model.generate_content(data.message)
