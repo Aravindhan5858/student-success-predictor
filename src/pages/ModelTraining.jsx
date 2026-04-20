@@ -3,6 +3,7 @@ import Badge from '../components/Badge'
 import Button from '../components/Button'
 import Card from '../components/Card'
 import ProgressBar from '../components/ProgressBar'
+import { useAppContext } from '../context/AppContext'
 
 const models = ['Random Forest', 'Logistic Regression', 'SVM', 'KNN']
 
@@ -19,7 +20,35 @@ const trainingStateTone = {
   completed: 'high',
 }
 
+const pipelineSteps = [
+  'Load data from MongoDB / CSV',
+  'Preprocess missing values and duplicates',
+  'Engineer engagement features',
+  'Split data 80/20',
+  'Train selected algorithm',
+  'Evaluate accuracy, precision, recall, F1',
+  'Save model artifact for prediction',
+]
+
+const featureGroups = [
+  'Attendance (%)',
+  'Assignment Score',
+  'Internal Marks',
+  'Study Hours',
+  'Classroom Interaction',
+  'Assessment Score',
+  'Interview Score',
+]
+
+const modelDescriptions = {
+  'Random Forest': 'Best overall choice for mixed academic data and non-linear patterns.',
+  'Logistic Regression': 'Fast baseline classifier for pass/fail and risk segmentation.',
+  SVM: 'Strong option for smaller datasets with clear decision boundaries.',
+  KNN: 'Simple benchmark model, useful for comparison and local similarity checks.',
+}
+
 function ModelTraining() {
+  const { currentUser } = useAppContext()
   const [selectedModel, setSelectedModel] = useState(models[0])
   const [crossValidationFolds, setCrossValidationFolds] = useState('5')
   const [trainSplit, setTrainSplit] = useState(80)
@@ -29,6 +58,7 @@ function ModelTraining() {
   const [classWeightMode, setClassWeightMode] = useState('balanced')
   const [progress, setProgress] = useState(0)
   const [trainingState, setTrainingState] = useState('idle')
+  const [trainingLog, setTrainingLog] = useState([])
 
   const performance = useMemo(() => {
     const baseScores = baseModelScores[selectedModel]
@@ -46,6 +76,18 @@ function ModelTraining() {
       f1Score: Math.min(97.9, Number((baseScores.f1Score + totalBoost * 0.92).toFixed(1))),
     }
   }, [selectedModel, crossValidationFolds, trainSplit, enableFeatureScaling, enableAutoTuning, classWeightMode])
+
+  const predictedRiskLevel = useMemo(() => {
+    if (performance.accuracy >= 90) {
+      return 'Low'
+    }
+
+    if (performance.accuracy >= 85) {
+      return 'Medium'
+    }
+
+    return 'High'
+  }, [performance.accuracy])
 
   useEffect(() => {
     if (trainingState !== 'running') {
@@ -70,24 +112,51 @@ function ModelTraining() {
   const handleTrainModel = () => {
     setProgress(0)
     setTrainingState('running')
+    setTrainingLog([
+      'Loaded academic records from data source',
+      `Selected ${selectedModel} for training`,
+      `Using ${crossValidationFolds}-fold validation and ${trainSplit}% train split`,
+      'Feature scaling and class balancing applied',
+      'Evaluation metrics computed and model artifact prepared',
+    ])
+  }
+
+  const handleReset = () => {
+    setProgress(0)
+    setTrainingState('idle')
+    setTrainingLog([])
   }
 
   const isTraining = trainingState === 'running'
+  const canTrain = currentUser?.role === 'admin'
   const trainButtonLabel = isTraining ? 'Training...' : trainingState === 'completed' ? 'Retrain Model' : 'Train Model'
   const trainingStateLabel = trainingState.charAt(0).toUpperCase() + trainingState.slice(1)
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <section className="flex flex-col gap-2">
         <h2 className="text-2xl font-bold text-slate-900">Model Training</h2>
-        <p className="text-sm text-slate-500">Tune model settings and monitor training performance in real time.</p>
+        <p className="text-sm text-slate-500">
+          Converts raw student academic data into a predictive engine for score estimation and risk classification.
+        </p>
       </section>
 
       <Card className="p-6 sm:p-8">
-        <h3 className="text-xl font-bold text-slate-900 sm:text-2xl">Training Configuration</h3>
-        <p className="mt-1 text-sm text-slate-500">
-          Configure training options and run model tuning for better prediction performance.
-        </p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="max-w-3xl">
+            <h3 className="text-xl font-bold text-slate-900 sm:text-2xl">Training Configuration</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Configure the algorithm, preprocessing settings, and validation strategy before training.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Training Mode</p>
+            <div className="mt-1 flex items-center gap-2">
+              <Badge tone={canTrain ? 'high' : 'low'}>{canTrain ? 'Admin Access' : 'Read Only'}</Badge>
+              <span className="text-sm text-slate-600">Only admin can train and publish model metrics.</span>
+            </div>
+          </div>
+        </div>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2">
           <div>
@@ -123,6 +192,64 @@ function ModelTraining() {
             </div>
           </div>
         </div>
+
+        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <Card className="border border-slate-200 p-4 shadow-none">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Input Feature Set</h3>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {featureGroups.map((feature) => (
+                <span key={feature} className="rounded-full border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 shadow-sm">
+                  {feature}
+                </span>
+              ))}
+            </div>
+            <p className="mt-4 text-sm text-slate-500">
+              Final score or performance class is used as the target label depending on whether regression or classification is enabled.
+            </p>
+          </Card>
+
+          <Card className="border border-slate-200 p-4 shadow-none">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Model Guidance</h3>
+            <div className="mt-4 space-y-3">
+              {models.map((model) => {
+                const isActive = model === selectedModel
+                return (
+                  <button
+                    key={model}
+                    type="button"
+                    onClick={() => setSelectedModel(model)}
+                    className={`flex w-full items-start justify-between gap-4 rounded-2xl border px-4 py-3 text-left transition ${isActive ? 'border-indigo-400/70 bg-indigo-950/35 shadow-[0_0_20px_rgba(91,140,255,0.28)]' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900">{model}</p>
+                      <p className="mt-1 text-sm text-slate-500">{modelDescriptions[model]}</p>
+                    </div>
+                    {isActive ? <Badge tone="high">Selected</Badge> : <Badge tone="low">Compare</Badge>}
+                  </button>
+                )
+              })}
+            </div>
+          </Card>
+        </div>
+
+        <Card className="mt-6 border border-slate-200 p-4 shadow-none">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Data Pipeline</h3>
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {pipelineSteps.map((step, index) => (
+              <div key={step} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
+                    {index + 1}
+                  </span>
+                  <div>
+                    <p className="font-medium text-slate-900">Step {index + 1}</p>
+                    <p className="text-sm text-slate-500">{step}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
 
         <Card className="mt-6 border border-slate-200 p-4 shadow-none">
           <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Training Features</h3>
@@ -189,15 +316,22 @@ function ModelTraining() {
           </div>
 
           <p className="mt-3 text-xs text-slate-500">
-            Early stopping set to {earlyStoppingPatience} epochs with {crossValidationFolds}-fold cross-validation.
+            Missing values are handled before training. Derived features such as engagement index and average performance can be added in preprocessing.
           </p>
         </Card>
 
-        <div className="mt-6">
-          <Button fullWidth={false} className="px-6" onClick={handleTrainModel} disabled={isTraining}>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button fullWidth={false} className="px-6" onClick={handleTrainModel} disabled={isTraining || !canTrain}>
             {trainButtonLabel}
           </Button>
+          <Button fullWidth={false} variant="outline" className="px-6" onClick={handleReset}>
+            Reset
+          </Button>
         </div>
+
+        {!canTrain ? (
+          <p className="mt-3 text-sm text-amber-700">Training controls are reserved for admin users.</p>
+        ) : null}
 
         <div className="mt-8 space-y-5">
           <ProgressBar value={progress} label="Training Progress" />
@@ -232,6 +366,43 @@ function ModelTraining() {
                 <Badge tone={performance.f1Score >= 90 ? 'high' : 'medium'}>
                   {performance.f1Score >= 90 ? 'Excellent' : 'Improving'}
                 </Badge>
+              </div>
+            </Card>
+            <Card className="p-4">
+              <p className="text-sm text-slate-500">Predicted Risk</p>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-lg font-semibold text-slate-900 sm:text-xl">{predictedRiskLevel}</p>
+                <Badge tone={predictedRiskLevel === 'Low' ? 'high' : predictedRiskLevel === 'Medium' ? 'medium' : 'low'}>
+                  {predictedRiskLevel}
+                </Badge>
+              </div>
+            </Card>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card className="p-4">
+              <p className="text-sm font-semibold uppercase tracking-wide text-slate-700">Training Flow</p>
+              <ol className="mt-4 space-y-3 text-sm text-slate-600">
+                <li>Load data</li>
+                <li>Preprocess and normalize</li>
+                <li>Train model</li>
+                <li>Evaluate metrics</li>
+                <li>Save model artifact</li>
+              </ol>
+            </Card>
+
+            <Card className="p-4">
+              <p className="text-sm font-semibold uppercase tracking-wide text-slate-700">Training Log</p>
+              <div className="mt-4 space-y-2 text-sm text-slate-600">
+                {trainingLog.length ? (
+                  trainingLog.map((entry) => (
+                    <div key={entry} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                      {entry}
+                    </div>
+                  ))
+                ) : (
+                  <p>No training started yet.</p>
+                )}
               </div>
             </Card>
           </div>
