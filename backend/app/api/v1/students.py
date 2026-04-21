@@ -7,6 +7,7 @@ from app.models.student import Student
 from app.models.academic import AcademicRecord
 from app.schemas.student import StudentUpdate, StudentResponse, StudentDetailResponse
 from app.services.prediction_service import predict_risk_level, get_recommendations
+from app.services.user_service import ensure_student_profile
 
 router = APIRouter()
 
@@ -19,9 +20,7 @@ def _prof_or_admin(current_user: User = Depends(get_current_active_user)) -> Use
 def get_my_profile(current_user: User = Depends(get_current_active_user), db: Session = Depends(get_db)):
     if current_user.role != UserRole.student:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Students only")
-    student = db.query(Student).filter(Student.user_id == current_user.id).first()
-    if not student:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student profile not found")
+    student = ensure_student_profile(db, current_user, auto_commit=True)
     records = db.query(AcademicRecord).filter(AcademicRecord.student_id == student.id).all()
     return StudentDetailResponse.model_validate({**student.__dict__, "academic_records": records})
 

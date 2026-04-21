@@ -30,7 +30,7 @@ def _prof_or_admin(current_user: User = Depends(get_current_active_user)) -> Use
 # ── existing routes ────────────────────────────────────────────────────────────
 
 @router.get("/dashboard", response_model=DashboardSummary)
-def dashboard(db: Session = Depends(get_db), _: User = Depends(_admin)):
+def dashboard(db: Session = Depends(get_db), _: User = Depends(_prof_or_admin)):
     return get_dashboard_summary(db)
 
 

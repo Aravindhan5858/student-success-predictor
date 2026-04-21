@@ -37,6 +37,23 @@ def create_new_user(data: UserCreate, db: Session = Depends(get_db), _: User = D
     return create_user(db, data)
 
 
+@router.get("/search", response_model=list[UserResponse])
+def search_users(
+    q: str = Query(..., min_length=1),
+    role: Optional[UserRole] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_active_user),
+):
+    """Search users by name or email. Used for mentorship dropdowns."""
+    query = db.query(User).filter(User.is_active == True)
+    if role:
+        query = query.filter(User.role == role)
+    query = query.filter(
+        (User.full_name.ilike(f"%{q}%")) | (User.email.ilike(f"%{q}%"))
+    )
+    return query.limit(10).all()
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 def get_user(user_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(_admin)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -64,23 +81,6 @@ def delete_user(user_id: uuid.UUID, db: Session = Depends(get_db), _: User = Dep
 class SuspendIn(BaseModel):
     reason: str
     hours: int = 24
-
-
-@router.get("/search", response_model=list[UserResponse])
-def search_users(
-    q: str = Query(..., min_length=1),
-    role: Optional[UserRole] = None,
-    db: Session = Depends(get_db),
-    _: User = Depends(get_current_active_user),
-):
-    """Search users by name or email. Used for mentorship dropdowns."""
-    query = db.query(User).filter(User.is_active == True)
-    if role:
-        query = query.filter(User.role == role)
-    query = query.filter(
-        (User.full_name.ilike(f"%{q}%")) | (User.email.ilike(f"%{q}%"))
-    )
-    return query.limit(10).all()
 
 
 @router.post("/{user_id}/suspend", dependencies=[Depends(_admin)])

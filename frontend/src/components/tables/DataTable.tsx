@@ -1,9 +1,16 @@
-'use client';
-import { useState } from 'react';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+"use client";
+import { useState } from "react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 export interface Column<T> {
   key: string;
@@ -13,7 +20,7 @@ export interface Column<T> {
 }
 
 interface DataTableProps<T> {
-  data: T[];
+  data: T[] | null | undefined;
   columns: Column<T>[];
   searchable?: boolean;
   searchKeys?: (keyof T)[];
@@ -22,19 +29,35 @@ interface DataTableProps<T> {
 }
 
 export default function DataTable<T extends Record<string, unknown>>({
-  data, columns, searchable = true, searchKeys = [], pageSize = 10, onRowClick,
+  data,
+  columns,
+  searchable = true,
+  searchKeys = [],
+  pageSize = 10,
+  onRowClick,
 }: DataTableProps<T>) {
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const filtered = search && searchKeys.length
-    ? data.filter((row) =>
-        searchKeys.some((k) => String(row[k] ?? '').toLowerCase().includes(search.toLowerCase()))
-      )
-    : data;
+  const normalizedData = Array.isArray(data) ? data : [];
+  const safePageSize = pageSize > 0 ? pageSize : 10;
 
-  const totalPages = Math.ceil(filtered.length / pageSize);
-  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const filtered =
+    search && searchKeys.length
+      ? normalizedData.filter((row) =>
+          searchKeys.some((k) =>
+            String(row[k] ?? "")
+              .toLowerCase()
+              .includes(search.toLowerCase()),
+          ),
+        )
+      : normalizedData;
+
+  const totalPages = Math.ceil(filtered.length / safePageSize);
+  const paginated = filtered.slice(
+    (page - 1) * safePageSize,
+    page * safePageSize,
+  );
 
   return (
     <div className="space-y-4">
@@ -44,7 +67,10 @@ export default function DataTable<T extends Record<string, unknown>>({
           <Input
             placeholder="Search..."
             value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
             className="pl-9"
           />
         </div>
@@ -54,14 +80,19 @@ export default function DataTable<T extends Record<string, unknown>>({
           <TableHeader>
             <TableRow>
               {columns.map((col) => (
-                <TableHead key={col.key} className={col.className}>{col.header}</TableHead>
+                <TableHead key={col.key} className={col.className}>
+                  {col.header}
+                </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {paginated.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="text-center text-muted-foreground py-8">
+                <TableCell
+                  colSpan={columns.length}
+                  className="text-center text-muted-foreground py-8"
+                >
                   No data found
                 </TableCell>
               </TableRow>
@@ -70,11 +101,13 @@ export default function DataTable<T extends Record<string, unknown>>({
                 <TableRow
                   key={i}
                   onClick={() => onRowClick?.(row)}
-                  className={onRowClick ? 'cursor-pointer' : ''}
+                  className={onRowClick ? "cursor-pointer" : ""}
                 >
                   {columns.map((col) => (
                     <TableCell key={col.key} className={col.className}>
-                      {col.render ? col.render(row) : String(row[col.key] ?? '')}
+                      {col.render
+                        ? col.render(row)
+                        : String(row[col.key] ?? "")}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -86,14 +119,28 @@ export default function DataTable<T extends Record<string, unknown>>({
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Showing {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, filtered.length)} of {filtered.length}
+            Showing {(page - 1) * safePageSize + 1}–
+            {Math.min(page * safePageSize, filtered.length)} of{" "}
+            {filtered.length}
           </p>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={page === 1}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page - 1)}
+              disabled={page === 1}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="text-sm">{page} / {totalPages}</span>
-            <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={page === totalPages}>
+            <span className="text-sm">
+              {page} / {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(page + 1)}
+              disabled={page === totalPages}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
