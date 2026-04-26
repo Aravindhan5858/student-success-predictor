@@ -15,7 +15,7 @@ export function useAuth() {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await authApi.login(email, password);
+      const { data } = await authApi.login(email, password);
       setAuth(data.user, data.access_token, data.refresh_token);
       router.push(getDashboardPath(data.user.role));
     } catch (err: unknown) {

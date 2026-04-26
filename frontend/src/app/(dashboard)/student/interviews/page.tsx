@@ -101,7 +101,7 @@ export default function InterviewsPage() {
   const [activeSession, setActiveSession] = useState<InterviewSession | null>(null);
   const qc = useQueryClient();
 
-  const { data: sessions, isLoading } = useQuery({
+  const { data: sessions, isLoading } = useQuery<InterviewSession[]>({
     queryKey: ['my-sessions'],
     queryFn: interviewsApi.getMySessions,
   });

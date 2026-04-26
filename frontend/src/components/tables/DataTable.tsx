@@ -28,7 +28,7 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
 }
 
-export default function DataTable<T extends Record<string, unknown>>({
+export default function DataTable<T extends Record<string, any>>({
   data,
   columns,
   searchable = true,

@@ -1,26 +1,13 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import type {
-  TokenResponse,
-  User,
-  Student,
-  Assessment,
-  TestResult,
-  InterviewSession,
-  AuditLog,
-  DashboardSummary,
-  PaginatedResponse,
-  PerformanceTrend,
-  RiskDistribution,
-  AttendanceTrend,
-  UploadHistory,
-} from "@/types";
+import axios from "axios";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1",
+  baseURL: API_URL,
   headers: { "Content-Type": "application/json" },
 });
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("access_token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
@@ -28,223 +15,201 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config;
 });
 
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (v: string) => void;
-  reject: (e: unknown) => void;
-}> = [];
-
-function processQueue(error: unknown, token: string | null) {
-  failedQueue.forEach(({ resolve, reject }) =>
-    error ? reject(error) : resolve(token!),
-  );
-  failedQueue = [];
-}
-
 api.interceptors.response.use(
-  (res) => res,
-  async (error: AxiosError) => {
-    const original = error.config as InternalAxiosRequestConfig & {
-      _retry?: boolean;
-    };
-    if (error.response?.status === 401 && !original._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject });
-        }).then((token) => {
-          original.headers.Authorization = `Bearer ${token}`;
-          return api(original);
-        });
-      }
-      original._retry = true;
-      isRefreshing = true;
-      const refreshToken =
-        typeof window !== "undefined"
-          ? localStorage.getItem("refresh_token")
-          : null;
-      if (!refreshToken) {
-        // Don't hard-redirect on background/prefetch calls — let the component handle it
-        const url = original.url ?? "";
-        const isSilent =
-          url.includes("/auth/me") || url.includes("/students/me");
-        if (typeof window !== "undefined" && !isSilent)
-          window.location.href = "/login";
-        return Promise.reject(error);
-      }
-      try {
-        const { data } = await axios.post<TokenResponse>(
-          `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh`,
-          { refresh_token: refreshToken },
-        );
-        localStorage.setItem("access_token", data.access_token);
-        localStorage.setItem("refresh_token", data.refresh_token);
-        processQueue(null, data.access_token);
-        original.headers.Authorization = `Bearer ${data.access_token}`;
-        return api(original);
-      } catch (err) {
-        processQueue(err, null);
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== "undefined") {
         localStorage.removeItem("access_token");
-        localStorage.removeItem("refresh_token");
-        if (typeof window !== "undefined") window.location.href = "/login";
-        return Promise.reject(err);
-      } finally {
-        isRefreshing = false;
+        window.location.href = "/login";
       }
     }
     return Promise.reject(error);
-  },
+  }
 );
 
-export const authApi = {
-  login: (email: string, password: string) =>
-    api
-      .post<TokenResponse>("/auth/login", { email, password })
-      .then((r) => r.data),
-  register: (data: {
-    full_name: string;
-    email: string;
-    password: string;
-    role: string;
-  }) => api.post<User>("/auth/register", data).then((r) => r.data),
-  refresh: (refresh_token: string) =>
-    api
-      .post<TokenResponse>("/auth/refresh", { refresh_token })
-      .then((r) => r.data),
-  me: () => api.get<User>("/auth/me").then((r) => r.data),
-  logout: () => api.post("/auth/logout").then((r) => r.data),
+// ── Auth ──────────────────────────────────────────────────────────────────────
+export const authAPI = {
+  login: (email: string, password: string) => api.post("/auth/login", { email, password }),
+  register: (data: any) => api.post("/auth/register", data),
+  me: () => api.get("/auth/me"),
+  logout: () => api.post("/auth/logout"),
+};
+// lowercase alias used by useAuth hook
+export const authApi = authAPI;
+
+// ── Corrections ───────────────────────────────────────────────────────────────
+export const correctionsAPI = {
+  create: (data: any) => api.post("/corrections", data),
+  list: () => api.get("/corrections"),
+  review: (id: string, status: string, note?: string) =>
+    api.patch(`/corrections/${id}/review`, { status, review_note: note }),
 };
 
-export const usersApi = {
-  list: (params?: { role?: string; page?: number; size?: number }) =>
-    api.get<PaginatedResponse<User>>("/users", { params }).then((r) => r.data),
-  getById: (id: number) => api.get<User>(`/users/${id}`).then((r) => r.data),
-  create: (data: Partial<User> & { password: string }) =>
-    api.post<User>("/users", data).then((r) => r.data),
-  update: (id: number, data: Partial<User>) =>
-    api.put<User>(`/users/${id}`, data).then((r) => r.data),
-  delete: (id: number) => api.delete(`/users/${id}`).then((r) => r.data),
-};
-
-export const studentsApi = {
-  list: (params?: {
-    department?: string;
-    risk_level?: string;
-    page?: number;
-    size?: number;
-    search?: string;
-  }) =>
-    api
-      .get<PaginatedResponse<Student>>("/students", { params })
-      .then((r) => r.data),
-  getById: (id: number) =>
-    api.get<Student>(`/students/${id}`).then((r) => r.data),
-  getMe: () => api.get<Student>("/students/me").then((r) => r.data),
-  getPerformance: (id: number) =>
-    api
-      .get<PerformanceTrend[]>(`/students/${id}/performance`)
-      .then((r) => r.data),
-};
-
-export const academicApi = {
-  uploadCSV: (file: File, onProgress?: (pct: number) => void) => {
-    const form = new FormData();
-    form.append("file", file);
-    return api
-      .post<{ message: string; records: number }>("/academic/upload", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (e) =>
-          onProgress &&
-          onProgress(Math.round((e.loaded * 100) / (e.total || 1))),
-      })
-      .then((r) => r.data);
+// ── Campus Interviews ─────────────────────────────────────────────────────────
+export const campusInterviewsAPI = {
+  create: (data: any) => api.post("/campus-interviews", data),
+  list: (department?: string) => api.get("/campus-interviews", { params: { department } }),
+  apply: (id: string, resume?: File) => {
+    const formData = new FormData();
+    if (resume) formData.append("resume", resume);
+    return api.post(`/campus-interviews/${id}/apply`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
   },
-  getRecords: (studentId: number) =>
-    api.get(`/academic/records/${studentId}`).then((r) => r.data),
-  getAttendance: (params?: { student_id?: number }) =>
-    api
-      .get<AttendanceTrend[]>("/academic/attendance", { params })
-      .then((r) => r.data),
-  getUploadHistory: () =>
-    api
-      .get<
-        UploadHistory[] | PaginatedResponse<UploadHistory>
-      >("/academic/uploads")
-      .then((r) => (Array.isArray(r.data) ? r.data : (r.data?.items ?? []))),
+  getApplications: (id: string) => api.get(`/campus-interviews/${id}/applications`),
 };
 
-export const assessmentsApi = {
-  list: () => api.get<Assessment[]>("/assessments").then((r) => r.data),
-  getById: (id: number) =>
-    api.get<Assessment>(`/assessments/${id}`).then((r) => r.data),
-  create: (data: Partial<Assessment>) =>
-    api.post<Assessment>("/assessments", data).then((r) => r.data),
-  submit: (id: number, answers: Record<string, string | number>) =>
-    api
-      .post<TestResult>(`/assessments/${id}/submit`, { answers })
-      .then((r) => r.data),
-  getResults: (id: number) =>
-    api.get<TestResult[]>(`/assessments/${id}/results`).then((r) => r.data),
-  getMyResults: () =>
-    api.get<TestResult[]>("/assessments/my-results").then((r) => r.data),
+// ── Proctoring ────────────────────────────────────────────────────────────────
+export const proctoringAPI = {
+  logViolation: (sessionId: string, type: string, details?: string) =>
+    api.post("/proctoring/violations", { session_id: sessionId, violation_type: type, details }),
+  getViolations: (sessionId: string) => api.get(`/proctoring/violations/${sessionId}`),
 };
 
-export const interviewsApi = {
-  startSession: (type: string) =>
-    api
-      .post<InterviewSession>("/interviews/start", { type })
-      .then((r) => r.data),
-  getSession: (id: number) =>
-    api.get<InterviewSession>(`/interviews/${id}`).then((r) => r.data),
-  respond: (id: number, responses: string[]) =>
-    api
-      .post<InterviewSession>(`/interviews/${id}/respond`, { responses })
-      .then((r) => r.data),
-  complete: (id: number) =>
-    api
-      .post<InterviewSession>(`/interviews/${id}/complete`)
-      .then((r) => r.data),
-  getMySessions: () =>
-    api.get<InterviewSession[]>("/interviews/my-sessions").then((r) => r.data),
+// ── Admin ─────────────────────────────────────────────────────────────────────
+export const adminAPI = {
+  createCollege: (data: any) => api.post("/admin/colleges", data),
+  listColleges: () => api.get("/admin/colleges"),
+  getStats: () => api.get("/admin/stats"),
+  getAuditLogs: (limit = 100) => api.get("/admin/audit-logs", { params: { limit } }),
+  suspendUser: (userId: string, reason: string) =>
+    api.patch(`/admin/users/${userId}/suspend`, { reason }),
 };
 
+// ── Professor ─────────────────────────────────────────────────────────────────
+export const professorAPI = {
+  uploadStudents: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post("/professor/upload-students", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+  },
+  getSampleCSV: () => api.get("/professor/sample-csv", { responseType: "text" }),
+};
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
 export const analyticsApi = {
-  getDashboard: () =>
-    api.get<DashboardSummary>("/analytics/dashboard").then((r) => r.data),
-  getPerformance: () =>
-    api.get<PerformanceTrend[]>("/analytics/performance").then((r) => r.data),
-  getRiskDistribution: () =>
-    api
-      .get<RiskDistribution>("/analytics/risk-distribution")
-      .then((r) => r.data),
-  getAttendanceTrends: () =>
-    api
-      .get<AttendanceTrend[]>("/analytics/attendance-trends")
-      .then((r) => r.data),
-  getAuditLogs: (params?: {
-    page?: number;
-    size?: number;
-    from?: string;
-    to?: string;
-  }) =>
-    api
-      .get<PaginatedResponse<AuditLog>>("/analytics/audit-logs", { params })
-      .then((r) => r.data),
+  getDashboard: async () => {
+    const { data } = await api.get("/analytics/dashboard");
+    return data;
+  },
+  getRiskDistribution: async () => {
+    const { data } = await api.get("/analytics/risk-distribution");
+    return data;
+  },
+  getPerformance: async () => {
+    const { data } = await api.get("/analytics/performance");
+    return data;
+  },
+  getAttendanceTrends: async () => {
+    const { data } = await api.get("/analytics/attendance-trends");
+    return data;
+  },
+  getAuditLogs: async (params?: { page?: number; size?: number; from?: string; to?: string }) => {
+    const { data } = await api.get("/audit-logs", { params });
+    return data;
+  },
 };
 
-export const filesApi = {
-  upload: (file: File, folder?: string) => {
-    const form = new FormData();
-    form.append("file", file);
-    if (folder) form.append("folder", folder);
-    return api
-      .post<{ url: string; public_id: string }>("/files/upload", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      })
-      .then((r) => r.data);
+// ── Assessments ───────────────────────────────────────────────────────────────
+export const assessmentsApi = {
+  list: async () => {
+    const { data } = await api.get("/assessments");
+    return data;
   },
-  delete: (publicId: string) =>
-    api.delete(`/files/${encodeURIComponent(publicId)}`).then((r) => r.data),
-  getMine: () => api.get("/files/mine").then((r) => r.data),
+  getById: async (id: number) => {
+    const { data } = await api.get(`/assessments/${id}`);
+    return data;
+  },
+  create: async (payload: any) => {
+    const { data } = await api.post("/assessments", payload);
+    return data;
+  },
+  submit: async (id: number, answers: Record<string, string | number>) => {
+    const { data } = await api.post(`/assessments/${id}/submit`, { answers });
+    return data;
+  },
+  getMyResults: async () => {
+    const { data } = await api.get("/assessments/my-results");
+    return data;
+  },
+};
+
+// ── Students ──────────────────────────────────────────────────────────────────
+export const studentsApi = {
+  list: async (filters?: { department?: string; risk_level?: string; page?: number; size?: number; search?: string }) => {
+    const { data } = await api.get("/students", { params: filters });
+    return data;
+  },
+  getById: async (id: number) => {
+    const { data } = await api.get(`/students/${id}`);
+    return data;
+  },
+  getMe: async () => {
+    const { data } = await api.get("/students/me");
+    return data;
+  },
+  getPerformance: async (id: number) => {
+    const { data } = await api.get(`/students/${id}/performance`);
+    return data;
+  },
+};
+
+// ── Academic / CSV Upload ─────────────────────────────────────────────────────
+export const academicApi = {
+  uploadCSV: async (file: File, onProgress?: (pct: number) => void) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const { data } = await api.post("/academic/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      onUploadProgress: (e) => {
+        if (e.total && onProgress) onProgress(Math.round((e.loaded * 100) / e.total));
+      },
+    });
+    return data;
+  },
+  getUploadHistory: async () => {
+    const { data } = await api.get("/academic/upload-history");
+    return data;
+  },
+};
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+export const usersApi = {
+  list: async (params?: { role?: string }) => {
+    const { data } = await api.get("/users", { params });
+    return data;
+  },
+  getById: async (id: number) => {
+    const { data } = await api.get(`/users/${id}`);
+    return data;
+  },
+  delete: async (id: number) => {
+    const { data } = await api.delete(`/users/${id}`);
+    return data;
+  },
+};
+
+// ── Interviews ────────────────────────────────────────────────────────────────
+export const interviewsApi = {
+  getMySessions: async () => {
+    const { data } = await api.get("/interviews/my-sessions");
+    return data;
+  },
+  startSession: async (type: string) => {
+    const { data } = await api.post("/interviews/start", { type });
+    return data;
+  },
+  respond: async (sessionId: number, responses: string[]) => {
+    const { data } = await api.post(`/interviews/${sessionId}/respond`, { responses });
+    return data;
+  },
+  complete: async (sessionId: number) => {
+    const { data } = await api.post(`/interviews/${sessionId}/complete`);
+    return data;
+  },
 };
 
 export default api;

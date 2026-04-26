@@ -136,7 +136,7 @@ export default function AssessmentsPage() {
   const { data: results } = useMyResults();
   const [taking, setTaking] = useState<Assessment | null>(null);
 
-  const completedIds = new Set(results?.map((r) => r.assessment_id));
+  const completedIds = new Set(results?.map((r: any) => r.assessment_id));
 
   if (isLoading) return <LoadingSpinner />;
 

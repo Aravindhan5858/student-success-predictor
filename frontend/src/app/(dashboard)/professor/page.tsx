@@ -13,7 +13,7 @@ export default function ProfessorDashboard() {
   const { data: studentsData, isLoading } = useStudents({ size: 10 });
   const { data: attendanceData, isLoading: loadingAttendance } = useAttendanceTrends();
 
-  const atRiskCount = studentsData?.items?.filter((s) => s.risk_level === 'high').length ?? 0;
+  const atRiskCount = studentsData?.items?.filter((s: any) => s.risk_level === 'high').length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -32,7 +32,7 @@ export default function ProfessorDashboard() {
         <StatCard title="At-Risk Students" value={atRiskCount} icon={AlertTriangle} iconClassName="bg-red-100" />
         <StatCard title="Avg CGPA" value={
           studentsData?.items?.length
-            ? (studentsData.items.reduce((s, st) => s + (st.cgpa || 0), 0) / studentsData.items.length).toFixed(2)
+            ? (studentsData.items.reduce((s: number, st: any) => s + (st.cgpa || 0), 0) / studentsData.items.length).toFixed(2)
             : '0.00'
         } icon={TrendingUp} />
       </div>
