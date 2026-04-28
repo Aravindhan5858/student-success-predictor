@@ -1,0 +1,27 @@
+from fastapi import APIRouter
+from app.api.v1 import auth, users, students, academic, assessments, interviews, analytics, files
+from app.api.v1 import profile, community, mentorship, mock_test, chatbot
+from app.api.v1 import corrections, campus_interviews, proctoring, admin, professor, billing, mcq
+
+router = APIRouter()
+
+router.include_router(auth.router, prefix="/auth", tags=["auth"])
+router.include_router(users.router, prefix="/users", tags=["users"])
+router.include_router(students.router, prefix="/students", tags=["students"])
+router.include_router(academic.router, prefix="/academic", tags=["academic"])
+router.include_router(assessments.router, prefix="/assessments", tags=["assessments"])
+router.include_router(interviews.router, prefix="/interviews", tags=["interviews"])
+router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
+router.include_router(files.router, prefix="/files", tags=["files"])
+router.include_router(profile.router, tags=["profile"])
+router.include_router(community.router, tags=["community"])
+router.include_router(mentorship.router, tags=["mentorship"])
+router.include_router(mock_test.router, tags=["mock-test"])
+router.include_router(chatbot.router, tags=["chatbot"])
+router.include_router(corrections.router, prefix="/corrections", tags=["corrections"])
+router.include_router(campus_interviews.router, prefix="/campus-interviews", tags=["campus-interviews"])
+router.include_router(proctoring.router, prefix="/proctoring", tags=["proctoring"])
+router.include_router(admin.router, prefix="/admin", tags=["admin"])
+router.include_router(professor.router, prefix="/professor", tags=["professor"])
+router.include_router(billing.router, prefix="/billing", tags=["billing"])
+router.include_router(mcq.router, prefix="/mcq", tags=["mcq"])

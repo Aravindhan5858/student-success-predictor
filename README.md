@@ -1,25 +1,39 @@
 # Student Success Predictor
 
-This project now uses a real database connection with a local `Express + SQLite` API.
+Full-stack PWA — Next.js (App Router) + FastAPI + PostgreSQL + Cloudinary
 
-## Run
+## Roles
+- **Admin** — system monitoring, user management, analytics
+- **Professor** — CSV upload, student tracking, predictive insights
+- **Student** — performance dashboard, assessments, mock interviews
 
-- Install dependencies:
+## Stack
+| Layer | Tech |
+|-------|------|
+| Frontend | Next.js 14 App Router, Tailwind CSS, shadcn/ui |
+| Backend | FastAPI, SQLAlchemy, Alembic |
+| Database | PostgreSQL |
+| Storage | Cloudinary |
+| Auth | JWT (access + refresh tokens) |
+| PWA | next-pwa, service worker |
 
-	`npm install`
+## Quick Start
 
-- Run frontend + backend together:
+```bash
+# Backend
+cd backend && cp .env.example .env
+pip install -r requirements.txt
+alembic upgrade head
+uvicorn app.main:app --reload
 
-	`npm run dev:full`
+# Frontend
+cd frontend && cp .env.example .env.local
+npm install
+npm run dev
+```
 
-## API Server
+## Docker
 
-- API base URL: `http://localhost:4000/api`
-- Health check: `GET /api/health`
-- Database file: `server/data.sqlite`
-
-## Optional Frontend API URL
-
-If needed, set a custom API URL using:
-
-`VITE_API_URL=http://localhost:4000/api`
+```bash
+docker-compose up --build
+```
