@@ -41,6 +41,7 @@ class Interview(Base):
     job_description: Mapped[str] = mapped_column(Text, nullable=True)
     link: Mapped[str] = mapped_column(String(500), nullable=True)
     department: Mapped[str] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
     created_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
@@ -53,6 +54,7 @@ class InterviewApplication(Base):
     student_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("students.id"), nullable=False, index=True)
     resume_url: Mapped[str] = mapped_column(String(500), nullable=True)
     is_interested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="applied")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
 

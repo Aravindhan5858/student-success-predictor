@@ -10,7 +10,7 @@ import api from '@/lib/api';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface UserRow {
-  id: number;
+  id: string;
   full_name: string;
   email: string;
   role: string;
@@ -19,17 +19,17 @@ interface UserRow {
 }
 
 interface ContentRow {
-  id: number;
+  id: string;
   content: string;
   author: string;
   status: string;
 }
 
 interface LogRow {
-  id: number;
+  id: string;
   action: string;
   target_type: string;
-  target_id: number;
+  target_id: string;
   actor: string;
   reason: string;
   timestamp: string;
@@ -76,7 +76,7 @@ function UsersTab() {
     }
   }
 
-  async function handleUnsuspend(id: number) {
+  async function handleUnsuspend(id: string) {
     await api.post(`/users/${id}/unsuspend`);
     fetchUsers();
   }

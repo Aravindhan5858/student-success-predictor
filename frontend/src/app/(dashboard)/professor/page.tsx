@@ -36,6 +36,11 @@ export default function ProfessorDashboard() {
             : '0.00'
         } icon={TrendingUp} />
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard title="Pending Requests" value={studentsData?.status_counts?.pending ?? 0} icon={AlertTriangle} />
+        <StatCard title="Accepted Requests" value={studentsData?.status_counts?.accepted ?? 0} icon={GraduationCap} />
+        <StatCard title="No Requests" value={studentsData?.status_counts?.none ?? 0} icon={TrendingUp} />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card border rounded-lg p-6">

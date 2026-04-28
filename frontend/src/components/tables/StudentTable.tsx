@@ -4,14 +4,15 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { getRiskColor } from '@/lib/utils';
 import type { Student } from '@/types';
-import { Eye } from 'lucide-react';
+import { Eye, Pencil } from 'lucide-react';
 
 interface Props {
   students: Student[];
   onView?: (student: Student) => void;
+  onEdit?: (student: Student) => void;
 }
 
-export default function StudentTable({ students, onView }: Props) {
+export default function StudentTable({ students, onView, onEdit }: Props) {
   const columns: Column<Student>[] = [
     {
       key: 'full_name',
@@ -40,13 +41,31 @@ export default function StudentTable({ students, onView }: Props) {
       ),
     },
     {
+      key: 'request_status',
+      header: 'Request Status',
+      render: (s) => (
+        <Badge variant={s.request_status === 'accepted' ? 'default' : s.request_status === 'pending' ? 'secondary' : 'outline'}>
+          {(s.request_status ?? 'none').toUpperCase()}
+        </Badge>
+      ),
+    },
+    {
       key: 'actions',
-      header: '',
-      render: (s) => onView ? (
-        <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onView(s); }}>
-          <Eye className="h-4 w-4" />
-        </Button>
-      ) : null,
+      header: 'Actions',
+      render: (s) => (
+        <div className="flex items-center gap-1">
+          {onView && (
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onView(s); }}>
+              <Eye className="h-4 w-4" />
+            </Button>
+          )}
+          {onEdit && (
+            <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onEdit(s); }}>
+              <Pencil className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+      ),
     },
   ];
 

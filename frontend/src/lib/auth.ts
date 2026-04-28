@@ -2,9 +2,11 @@ import type { Role } from '@/types';
 
 export function getDashboardPath(role: Role): string {
   switch (role) {
+    case 'super_admin': return '/super-admin';
     case 'admin': return '/admin';
     case 'professor': return '/professor';
     case 'student': return '/student';
+    default: return '/student';
   }
 }
 

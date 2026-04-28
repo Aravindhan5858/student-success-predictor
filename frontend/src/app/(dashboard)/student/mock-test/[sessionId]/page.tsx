@@ -106,8 +106,20 @@ export default function ExamSessionPage() {
 
   if (loading || !session) return <LoadingSpinner />;
 
-  const questions = session.questions;
-  const q = questions[current];
+  const questions = Array.isArray(session.questions) ? session.questions : [];
+  const safeCurrent = Math.min(current, Math.max(questions.length - 1, 0));
+  const q = questions[safeCurrent];
+
+  if (questions.length === 0 || !q) {
+    return (
+      <div className="h-screen flex items-center justify-center p-6">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">No questions available for this session.</p>
+          <Button onClick={() => router.push('/student/mock-test')}>Back to Mock Tests</Button>
+        </div>
+      </div>
+    );
+  }
   const mins = Math.floor(timeLeft / 60);
   const secs = timeLeft % 60;
   const timerColor = timeLeft < 60 ? 'text-destructive' : timeLeft < 300 ? 'text-yellow-500' : 'text-foreground';
@@ -124,7 +136,7 @@ export default function ExamSessionPage() {
             <Clock className="h-4 w-4" />
             {mins}:{secs.toString().padStart(2, '0')}
           </span>
-          <span className="text-sm text-muted-foreground">Q {current + 1}/{questions.length}</span>
+          <span className="text-sm text-muted-foreground">Q {safeCurrent + 1}/{questions.length}</span>
           {violations > 0 && (
             <Badge variant="destructive" className="flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" /> {violations} violation{violations > 1 ? 's' : ''}
@@ -138,7 +150,7 @@ export default function ExamSessionPage() {
         <div className="w-16 border-r bg-card flex flex-col items-center py-4 gap-2 overflow-y-auto shrink-0">
           {questions.map((_, i) => {
             const answered = !!answers[questions[i].id];
-            const isCurrent = i === current;
+            const isCurrent = i === safeCurrent;
             return (
               <button
                 key={i}
@@ -189,12 +201,12 @@ export default function ExamSessionPage() {
 
           {/* Bottom nav */}
           <div className="flex justify-between items-center px-6 py-4 border-t bg-card shrink-0">
-            <Button variant="outline" onClick={() => setCurrent(Math.max(0, current - 1))} disabled={current === 0}>
+            <Button variant="outline" onClick={() => setCurrent(Math.max(0, safeCurrent - 1))} disabled={safeCurrent === 0}>
               Previous
             </Button>
             <div className="flex gap-2">
-              {current < questions.length - 1 ? (
-                <Button onClick={() => setCurrent(current + 1)}>Next</Button>
+              {safeCurrent < questions.length - 1 ? (
+                <Button onClick={() => setCurrent(safeCurrent + 1)}>Next</Button>
               ) : (
                 <Button
                   onClick={() => handleSubmit(session, answers)}

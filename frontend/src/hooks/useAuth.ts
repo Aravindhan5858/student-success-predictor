@@ -11,11 +11,11 @@ export function useAuth() {
   const { setAuth, clearAuth, user, isAuthenticated } = useAuthStore();
   const router = useRouter();
 
-  const login = async (email: string, password: string) => {
+  const login = async (identifier: string, password: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const { data } = await authApi.login(email, password);
+      const { data } = await authApi.login(identifier, password);
       setAuth(data.user, data.access_token, data.refresh_token);
       router.push(getDashboardPath(data.user.role));
     } catch (err: unknown) {

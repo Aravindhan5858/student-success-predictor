@@ -15,6 +15,7 @@ export default function CSVUploadForm({ onSuccess }: Props) {
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
+  const [errors, setErrors] = useState<string[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const qc = useQueryClient();
@@ -28,6 +29,7 @@ export default function CSVUploadForm({ onSuccess }: Props) {
     setFile(f);
     setStatus('idle');
     setMessage('');
+    setErrors([]);
   };
 
   const onSubmit = async () => {
@@ -37,13 +39,23 @@ export default function CSVUploadForm({ onSuccess }: Props) {
     try {
       const result = await academicApi.uploadCSV(file, (pct) => setProgress(pct));
       setStatus('success');
-      setMessage(`Successfully imported ${result.records} records`);
+      const saved = result.saved ?? result.success ?? 0;
+      setMessage(`Successfully imported ${saved} records`);
+      setErrors(Array.isArray(result.errors) ? result.errors.slice(0, 10) : []);
       setFile(null);
       qc.invalidateQueries({ queryKey: ['students'] });
       onSuccess?.();
     } catch (err: unknown) {
       setStatus('error');
-      setMessage((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || 'Upload failed');
+      const detail = (err as { response?: { data?: { detail?: string | { message?: string; fields?: string[] } } } })?.response?.data?.detail;
+      if (typeof detail === 'string') {
+        setMessage(detail);
+      } else if (detail && typeof detail === 'object') {
+        setMessage(detail.message || 'Upload failed');
+        setErrors(detail.fields ?? []);
+      } else {
+        setMessage('Upload failed');
+      }
     }
   };
 
@@ -104,8 +116,13 @@ export default function CSVUploadForm({ onSuccess }: Props) {
       )}
 
       {status === 'error' && (
-        <div className="flex items-center gap-2 text-destructive bg-destructive/10 p-3 rounded-md text-sm">
-          <AlertCircle className="h-4 w-4" /> {message}
+        <div className="text-destructive bg-destructive/10 p-3 rounded-md text-sm space-y-2">
+          <div className="flex items-center gap-2"><AlertCircle className="h-4 w-4" /> {message}</div>
+          {errors.length > 0 && (
+            <ul className="list-disc pl-5 space-y-1">
+              {errors.map((e, i) => <li key={i}>{e}</li>)}
+            </ul>
+          )}
         </div>
       )}
 

@@ -30,7 +30,7 @@ api.interceptors.response.use(
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export const authAPI = {
-  login: (email: string, password: string) => api.post("/auth/login", { email, password }),
+  login: (identifier: string, password: string) => api.post("/auth/login", { identifier, password }),
   register: (data: any) => api.post("/auth/register", data),
   me: () => api.get("/auth/me"),
   logout: () => api.post("/auth/logout"),
@@ -58,6 +58,10 @@ export const campusInterviewsAPI = {
     });
   },
   getApplications: (id: string) => api.get(`/campus-interviews/${id}/applications`),
+  update: (id: string, payload: any) => api.put(`/campus-interviews/${id}`, payload),
+  close: (id: string) => api.post(`/campus-interviews/${id}/close`),
+  updateApplicationStatus: (applicationId: string, status: string) =>
+    api.patch(`/campus-interviews/applications/${applicationId}/status`, { status }),
 };
 
 // ── Proctoring ────────────────────────────────────────────────────────────────
@@ -73,8 +77,10 @@ export const adminAPI = {
   listColleges: () => api.get("/admin/colleges"),
   getStats: () => api.get("/admin/stats"),
   getAuditLogs: (limit = 100) => api.get("/admin/audit-logs", { params: { limit } }),
-  suspendUser: (userId: string, reason: string) =>
-    api.patch(`/admin/users/${userId}/suspend`, { reason }),
+  suspendUser: (userId: string, reason: string, hours = 24) =>
+    api.post(`/admin/users/${userId}/suspend`, { reason, hours }),
+  unsuspendUser: (userId: string) =>
+    api.post(`/admin/users/${userId}/unsuspend`),
 };
 
 // ── Professor ─────────────────────────────────────────────────────────────────
@@ -87,6 +93,12 @@ export const professorAPI = {
     });
   },
   getSampleCSV: () => api.get("/professor/sample-csv", { responseType: "text" }),
+  downloadSampleTemplate: () => api.get("/professor/sample-template", { responseType: "blob" }),
+  downloadAcademicTemplate: () => api.get("/professor/sample-academic-template", { responseType: "blob" }),
+  getStudentMatrix: async (params?: { department?: string; risk_level?: string; page?: number; size?: number; search?: string }) => {
+    const { data } = await api.get("/professor/student-matrix", { params });
+    return data;
+  },
 };
 
 // ── Analytics ─────────────────────────────────────────────────────────────────
@@ -108,7 +120,7 @@ export const analyticsApi = {
     return data;
   },
   getAuditLogs: async (params?: { page?: number; size?: number; from?: string; to?: string }) => {
-    const { data } = await api.get("/audit-logs", { params });
+    const { data } = await api.get("/analytics/audit-logs", { params });
     return data;
   },
 };
@@ -119,7 +131,7 @@ export const assessmentsApi = {
     const { data } = await api.get("/assessments");
     return data;
   },
-  getById: async (id: number) => {
+  getById: async (id: string) => {
     const { data } = await api.get(`/assessments/${id}`);
     return data;
   },
@@ -127,7 +139,7 @@ export const assessmentsApi = {
     const { data } = await api.post("/assessments", payload);
     return data;
   },
-  submit: async (id: number, answers: Record<string, string | number>) => {
+  submit: async (id: string, answers: Record<string, string | number>) => {
     const { data } = await api.post(`/assessments/${id}/submit`, { answers });
     return data;
   },
@@ -140,10 +152,10 @@ export const assessmentsApi = {
 // ── Students ──────────────────────────────────────────────────────────────────
 export const studentsApi = {
   list: async (filters?: { department?: string; risk_level?: string; page?: number; size?: number; search?: string }) => {
-    const { data } = await api.get("/students", { params: filters });
+    const { data } = await api.get("/professor/student-matrix", { params: filters });
     return data;
   },
-  getById: async (id: number) => {
+  getById: async (id: string) => {
     const { data } = await api.get(`/students/${id}`);
     return data;
   },
@@ -151,8 +163,12 @@ export const studentsApi = {
     const { data } = await api.get("/students/me");
     return data;
   },
-  getPerformance: async (id: number) => {
+  getPerformance: async (id: string) => {
     const { data } = await api.get(`/students/${id}/performance`);
+    return data;
+  },
+  update: async (id: string, payload: any) => {
+    const { data } = await api.put(`/students/${id}`, payload);
     return data;
   },
 };
@@ -162,7 +178,7 @@ export const academicApi = {
   uploadCSV: async (file: File, onProgress?: (pct: number) => void) => {
     const formData = new FormData();
     formData.append("file", file);
-    const { data } = await api.post("/academic/upload", formData, {
+    const { data } = await api.post("/academic/upload-csv", formData, {
       headers: { "Content-Type": "multipart/form-data" },
       onUploadProgress: (e) => {
         if (e.total && onProgress) onProgress(Math.round((e.loaded * 100) / e.total));
@@ -171,7 +187,23 @@ export const academicApi = {
     return data;
   },
   getUploadHistory: async () => {
-    const { data } = await api.get("/academic/upload-history");
+    const { data } = await api.get("/academic/uploads");
+    return data;
+  },
+  listRecords: async (studentId?: string) => {
+    const { data } = await api.get("/academic/records", { params: { student_id: studentId } });
+    return data;
+  },
+  createRecord: async (payload: any) => {
+    const { data } = await api.post("/academic/records", payload);
+    return data;
+  },
+  updateRecord: async (id: string, payload: any) => {
+    const { data } = await api.put(`/academic/records/${id}`, payload);
+    return data;
+  },
+  deleteRecord: async (id: string) => {
+    const { data } = await api.delete(`/academic/records/${id}`);
     return data;
   },
 };
@@ -182,12 +214,48 @@ export const usersApi = {
     const { data } = await api.get("/users", { params });
     return data;
   },
-  getById: async (id: number) => {
+  getById: async (id: string) => {
     const { data } = await api.get(`/users/${id}`);
     return data;
   },
-  delete: async (id: number) => {
+  delete: async (id: string) => {
     const { data } = await api.delete(`/users/${id}`);
+    return data;
+  },
+};
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+export const profileApi = {
+  get: async () => {
+    const { data } = await api.get("/profile");
+    return data;
+  },
+  update: async (payload: any) => {
+    const { data } = await api.put("/profile", payload);
+    return data;
+  },
+  uploadResume: async (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    const { data } = await api.post("/profile/resume", form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data;
+  },
+  analyzeResume: async () => {
+    const { data } = await api.post("/profile/resume/analyze");
+    return data;
+  },
+  setPublicVisibility: async (isPublic: boolean) => {
+    const { data } = await api.patch("/profile/public-visibility", { is_public: isPublic });
+    return data;
+  },
+  regeneratePublicSlug: async () => {
+    const { data } = await api.post("/profile/public-slug/regenerate");
+    return data;
+  },
+  getPublicProfile: async (slug: string) => {
+    const { data } = await api.get(`/public/profile/${slug}`);
     return data;
   },
 };
@@ -202,12 +270,117 @@ export const interviewsApi = {
     const { data } = await api.post("/interviews/start", { type });
     return data;
   },
-  respond: async (sessionId: number, responses: string[]) => {
+  respond: async (sessionId: string, responses: string[]) => {
     const { data } = await api.post(`/interviews/${sessionId}/respond`, { responses });
     return data;
   },
-  complete: async (sessionId: number) => {
+  complete: async (sessionId: string) => {
     const { data } = await api.post(`/interviews/${sessionId}/complete`);
+    return data;
+  },
+};
+
+// ── MCQ Testing ───────────────────────────────────────────────────────────────
+export const mcqApi = {
+  start: async (domain: string, numQuestions = 10) => {
+    const { data } = await api.post("/mcq/start", { domain, num_questions: numQuestions });
+    return data;
+  },
+  submitAnswer: async (attemptId: string, questionId: string, answer: string) => {
+    const { data } = await api.post("/mcq/submit", { attempt_id: attemptId, question_id: questionId, answer });
+    return data;
+  },
+  complete: async (attemptId: string) => {
+    const { data } = await api.post(`/mcq/complete/${attemptId}`);
+    return data;
+  },
+  listAttempts: async () => {
+    const { data } = await api.get("/mcq/attempts");
+    return data;
+  },
+  getAnalytics: async (attemptId: string) => {
+    const { data } = await api.get(`/mcq/analytics/${attemptId}`);
+    return data;
+  },
+  logWarning: async (attemptId: string, warningType: string, severity = "medium", details?: string) => {
+    const { data } = await api.post("/mcq/proctoring/warning", {
+      attempt_id: attemptId,
+      warning_type: warningType,
+      severity,
+      details,
+    });
+    return data;
+  },
+  logEmotion: async (
+    attemptId: string,
+    emotion: string,
+    confidence: number,
+    faceDetected: boolean,
+    faceCount: number
+  ) => {
+    const { data } = await api.post("/mcq/proctoring/emotion", {
+      attempt_id: attemptId,
+      emotion,
+      confidence,
+      face_detected: faceDetected,
+      face_count: faceCount,
+    });
+    return data;
+  },
+  getProctoringReport: async (attemptId: string) => {
+    const { data } = await api.get(`/mcq/proctoring/${attemptId}`);
+    return data;
+  },
+};
+
+// ── Billing ───────────────────────────────────────────────────────────────────
+export const billingApi = {
+  createSubscription: async (planName: string, amount: number, durationDays: number) => {
+    const { data } = await api.post("/billing/subscriptions", { plan_name: planName, amount, duration_days: durationDays });
+    return data;
+  },
+  listSubscriptions: async () => {
+    const { data } = await api.get("/billing/subscriptions");
+    return data;
+  },
+  createPayment: async (amount: number, paymentMethod: string, subscriptionId?: string) => {
+    const { data } = await api.post("/billing/payments", { amount, payment_method: paymentMethod, subscription_id: subscriptionId });
+    return data;
+  },
+  listPayments: async () => {
+    const { data } = await api.get("/billing/payments");
+    return data;
+  },
+  listDues: async () => {
+    const { data } = await api.get("/billing/dues");
+    return data;
+  },
+  getRevenue: async () => {
+    const { data } = await api.get("/billing/revenue");
+    return data;
+  },
+};
+
+// ── Super Admin ───────────────────────────────────────────────────────────────
+export const superAdminApi = {
+  getStats: async () => {
+    const { data } = await api.get("/admin/stats");
+    return data;
+  },
+  listColleges: async () => {
+    const { data } = await api.get("/admin/colleges");
+    return data;
+  },
+  createCollege: async (payload: any) => {
+    const { data } = await api.post("/admin/colleges", payload);
+    return data;
+  },
+  getAuditLogs: async (params?: { page?: number; size?: number }) => {
+    const { data } = await api.get("/admin/audit-logs", { params });
+    return data;
+  },
+  suspendUser: async (userId: string, reason: string, hours = 24) => {
+    const { data } = await api.post(`/admin/users/${userId}/suspend`, { reason, hours });
     return data;
   },
 };

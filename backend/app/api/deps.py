@@ -29,8 +29,9 @@ def get_current_active_user(current_user: User = Depends(get_current_user)) -> U
     return current_user
 
 
-require_admin = RoleChecker([UserRole.admin])
-require_professor = RoleChecker([UserRole.professor, UserRole.admin])
+require_super_admin = RoleChecker([UserRole.super_admin])
+require_admin = RoleChecker([UserRole.admin, UserRole.super_admin])
+require_professor = RoleChecker([UserRole.professor, UserRole.admin, UserRole.super_admin])
 require_student = RoleChecker([UserRole.student])
 
 

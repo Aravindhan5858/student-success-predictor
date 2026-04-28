@@ -16,8 +16,12 @@ async def parse_academic_csv(file: UploadFile) -> Tuple[List[dict], List[str]]:
     errors: List[str] = []
     records: List[dict] = []
 
+    filename = (file.filename or "").lower()
     try:
-        df = pd.read_csv(io.BytesIO(content))
+        if filename.endswith(".xlsx"):
+            df = pd.read_excel(io.BytesIO(content))
+        else:
+            df = pd.read_csv(io.BytesIO(content))
     except Exception as e:
         return [], [f"Failed to parse file: {str(e)}"]
 
@@ -49,3 +53,11 @@ async def parse_academic_csv(file: UploadFile) -> Tuple[List[dict], List[str]]:
             errors.append(f"Row {row_num}: {str(e)}")
 
     return records, errors
+
+
+def get_sample_academic_template_csv() -> str:
+    return (
+        "student_id,course_code,semester,marks,attendance,grade\n"
+        "CS2021001,CS301,6,89,95,A\n"
+        "CS2021002,CS302,6,76,88,B\n"
+    )

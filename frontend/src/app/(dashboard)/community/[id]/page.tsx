@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import LoadingSpinner from '@/components/shared/LoadingSpinner';
 
-interface Author { id: number; full_name: string }
+interface Author { id: string; full_name: string }
 interface Answer {
   id: string;
   body: string;
@@ -28,6 +28,24 @@ interface QuestionDetail {
   created_at: string;
   answers: Answer[];
 }
+
+type QuestionDetailApi = {
+  id: string;
+  title: string;
+  body: string;
+  tags?: string[] | null;
+  votes?: number;
+  author_id?: string | null;
+  created_at: string;
+  answers?: Array<{
+    id: string;
+    body: string;
+    votes?: number;
+    is_accepted?: boolean;
+    author_id?: string | null;
+    created_at: string;
+  }>;
+};
 
 const AVATAR_COLORS = [
   'bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500',
@@ -60,12 +78,31 @@ export default function QuestionDetailPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const isModerator = user?.role === 'professor' || user?.role === 'admin';
-  const isAuthor = question?.author?.id === user?.id;
+  const isAuthor = String(question?.author?.id ?? '') === String(user?.id ?? '');
 
   const load = async () => {
     try {
-      const { data } = await api.get(`/questions/${id}`);
-      setQuestion(data);
+      const { data } = await api.get<QuestionDetailApi>(`/questions/${id}`);
+      setQuestion({
+        id: data.id,
+        title: data.title,
+        body: data.body,
+        tags: Array.isArray(data.tags) ? data.tags : [],
+        vote_count: data.votes ?? 0,
+        author: {
+          id: String(data.author_id ?? ''),
+          full_name: 'Community User',
+        },
+        created_at: data.created_at,
+        answers: (data.answers ?? []).map((a) => ({
+          id: a.id,
+          body: a.body,
+          vote_count: a.votes ?? 0,
+          is_accepted: !!a.is_accepted,
+          author: { id: String(a.author_id ?? ''), full_name: 'Community User' },
+          created_at: a.created_at,
+        })),
+      });
     } catch {
       toast({ title: 'Failed to load question', variant: 'destructive' });
     } finally {
@@ -77,7 +114,7 @@ export default function QuestionDetailPage() {
 
   const vote = async (answerId: string, value: 1 | -1) => {
     try {
-      await api.post(`/answers/${answerId}/vote`, { value });
+      await api.post(`/answers/${answerId}/vote`, { direction: value === 1 ? 'up' : 'down' });
       setQuestion((q) => q ? {
         ...q,
         answers: q.answers.map((a) => a.id === answerId ? { ...a, vote_count: a.vote_count + value } : a),
@@ -102,7 +139,7 @@ export default function QuestionDetailPage() {
   const deleteQuestion = async () => {
     if (!confirm('Delete this question?')) return;
     try {
-      await api.delete(`/questions/${id}`);
+      await api.post('/moderation/delete', { target_type: 'question', target_id: id, reason: 'Removed by moderator' });
       router.push('/community');
     } catch {
       toast({ title: 'Failed to delete', variant: 'destructive' });
@@ -112,7 +149,7 @@ export default function QuestionDetailPage() {
   const deleteAnswer = async (answerId: string) => {
     if (!confirm('Delete this answer?')) return;
     try {
-      await api.delete(`/answers/${answerId}`);
+      await api.post('/moderation/delete', { target_type: 'answer', target_id: answerId, reason: 'Removed by moderator' });
       setQuestion((q) => q ? { ...q, answers: q.answers.filter((a) => a.id !== answerId) } : q);
     } catch {
       toast({ title: 'Failed to delete', variant: 'destructive' });
@@ -124,7 +161,15 @@ export default function QuestionDetailPage() {
     setSubmitting(true);
     try {
       const { data } = await api.post(`/questions/${id}/answers`, { body: answerBody });
-      setQuestion((q) => q ? { ...q, answers: [...q.answers, data] } : q);
+      const mapped: Answer = {
+        id: data.id,
+        body: data.body,
+        vote_count: data.votes ?? 0,
+        is_accepted: !!data.is_accepted,
+        author: { id: String(data.author_id ?? user?.id ?? ''), full_name: user?.full_name ?? 'You' },
+        created_at: data.created_at,
+      };
+      setQuestion((q) => q ? { ...q, answers: [...q.answers, mapped] } : q);
       setAnswerBody('');
       toast({ title: 'Answer posted' });
     } catch {

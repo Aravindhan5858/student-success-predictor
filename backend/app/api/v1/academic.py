@@ -79,6 +79,41 @@ def create_record(data: AcademicRecordCreate, db: Session = Depends(get_db), _: 
     return create_academic_record(db, data)
 
 
+@router.get("/records/{record_id}", response_model=AcademicRecordResponse)
+def get_record(record_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_active_user)):
+    record = db.query(AcademicRecord).filter(AcademicRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    return record
+
+
+@router.put("/records/{record_id}", response_model=AcademicRecordResponse)
+def update_record(
+    record_id: uuid.UUID,
+    data: AcademicRecordCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(_professor),
+):
+    record = db.query(AcademicRecord).filter(AcademicRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    payload = data.model_dump()
+    for key, value in payload.items():
+        setattr(record, key, value)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@router.delete("/records/{record_id}", status_code=204)
+def delete_record(record_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(_professor)):
+    record = db.query(AcademicRecord).filter(AcademicRecord.id == record_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Record not found")
+    db.delete(record)
+    db.commit()
+
+
 @router.get("/attendance", response_model=list[AttendanceResponse])
 def list_attendance(
     student_id: uuid.UUID = Query(None),
@@ -100,6 +135,41 @@ def create_attendance(data: AttendanceCreate, db: Session = Depends(get_db), _: 
     db.commit()
     db.refresh(record)
     return record
+
+
+@router.get("/attendance/{attendance_id}", response_model=AttendanceResponse)
+def get_attendance(attendance_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(get_current_active_user)):
+    record = db.query(AttendanceModel).filter(AttendanceModel.id == attendance_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    return record
+
+
+@router.put("/attendance/{attendance_id}", response_model=AttendanceResponse)
+def update_attendance(
+    attendance_id: uuid.UUID,
+    data: AttendanceCreate,
+    db: Session = Depends(get_db),
+    _: User = Depends(_professor),
+):
+    record = db.query(AttendanceModel).filter(AttendanceModel.id == attendance_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    payload = data.model_dump()
+    for key, value in payload.items():
+        setattr(record, key, value)
+    db.commit()
+    db.refresh(record)
+    return record
+
+
+@router.delete("/attendance/{attendance_id}", status_code=204)
+def delete_attendance(attendance_id: uuid.UUID, db: Session = Depends(get_db), _: User = Depends(_professor)):
+    record = db.query(AttendanceModel).filter(AttendanceModel.id == attendance_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Attendance not found")
+    db.delete(record)
+    db.commit()
 
 
 # ── new routes ─────────────────────────────────────────────────────────────────

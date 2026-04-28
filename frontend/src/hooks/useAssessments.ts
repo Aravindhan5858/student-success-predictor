@@ -9,7 +9,7 @@ export function useAssessments() {
   });
 }
 
-export function useAssessment(id: number | null) {
+export function useAssessment(id: string | null) {
   return useQuery<Assessment>({
     queryKey: ['assessment', id],
     queryFn: () => assessmentsApi.getById(id!),
@@ -19,9 +19,8 @@ export function useAssessment(id: number | null) {
 
 export function useSubmitAssessment() {
   const qc = useQueryClient();
-  return useMutation<TestResult, Error, { id: number; answers: Record<string, string | number> }>({
-    mutationFn: ({ id, answers }) =>
-      assessmentsApi.submit(id, answers),
+  return useMutation<TestResult, Error, { id: string; answers: Record<string, string | number> }>({
+    mutationFn: ({ id, answers }) => assessmentsApi.submit(id, answers),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['my-results'] }),
   });
 }

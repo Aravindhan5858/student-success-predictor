@@ -1,36 +1,41 @@
+import uuid
+from datetime import datetime
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import select
-from typing import List
-from app.api.deps import get_db, get_current_user
-from app.models.user import User
+from app.api.deps import get_db, get_current_active_user
+from app.models.user import User, UserRole
 from app.models.extended import CorrectionRequest
 from app.models.student import Student
 from pydantic import BaseModel
-from datetime import datetime
-import uuid
 
 router = APIRouter()
 
 
 class CorrectionRequestCreate(BaseModel):
     field_name: str
-    current_value: str | None = None
+    current_value: Optional[str] = None
     requested_value: str
     reason: str
+
+
+class CorrectionReviewIn(BaseModel):
+    status: str
+    review_note: Optional[str] = None
 
 
 class CorrectionRequestResponse(BaseModel):
     id: uuid.UUID
     field_name: str
-    current_value: str | None
+    current_value: Optional[str]
     requested_value: str
     reason: str
     status: str
-    reviewed_by: uuid.UUID | None
-    review_note: str | None
+    reviewed_by: Optional[uuid.UUID]
+    review_note: Optional[str]
     created_at: datetime
-    reviewed_at: datetime | None
+    reviewed_at: Optional[datetime]
 
     class Config:
         from_attributes = True
@@ -40,8 +45,11 @@ class CorrectionRequestResponse(BaseModel):
 def create_correction_request(
     data: CorrectionRequestCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_user),
 ):
+    if current_user.role != UserRole.student:
+        raise HTTPException(status_code=403, detail="Students only")
+
     student = db.scalar(select(Student).where(Student.user_id == current_user.id))
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
@@ -52,7 +60,7 @@ def create_correction_request(
         current_value=data.current_value,
         requested_value=data.requested_value,
         reason=data.reason,
-        status="pending"
+        status="pending",
     )
     db.add(correction)
     db.commit()
@@ -63,42 +71,42 @@ def create_correction_request(
 @router.get("/", response_model=List[CorrectionRequestResponse])
 def list_correction_requests(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_user),
 ):
-    if current_user.role == "student":
+    if current_user.role == UserRole.student:
         student = db.scalar(select(Student).where(Student.user_id == current_user.id))
         if not student:
             raise HTTPException(status_code=404, detail="Student not found")
-        corrections = db.scalars(select(CorrectionRequest).where(CorrectionRequest.student_id == student.id)).all()
-    elif current_user.role in ["professor", "admin"]:
-        corrections = db.scalars(select(CorrectionRequest)).all()
-    else:
-        raise HTTPException(status_code=403, detail="Not authorized")
-    
-    return corrections
+        return db.scalars(
+            select(CorrectionRequest).where(CorrectionRequest.student_id == student.id)
+        ).all()
+    elif current_user.role in (UserRole.professor, UserRole.admin, UserRole.super_admin):
+        return db.scalars(select(CorrectionRequest)).all()
+    raise HTTPException(status_code=403, detail="Not authorized")
 
 
 @router.patch("/{correction_id}/review")
 def review_correction_request(
     correction_id: uuid.UUID,
-    status: str,
-    review_note: str | None = None,
+    data: CorrectionReviewIn,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_active_user),
 ):
-    if current_user.role not in ["professor", "admin"]:
+    if current_user.role not in (UserRole.professor, UserRole.admin, UserRole.super_admin):
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    correction = db.scalar(select(CorrectionRequest).where(CorrectionRequest.id == correction_id))
+    correction = db.scalar(
+        select(CorrectionRequest).where(CorrectionRequest.id == correction_id)
+    )
     if not correction:
         raise HTTPException(status_code=404, detail="Correction request not found")
 
-    correction.status = status
+    correction.status = data.status
     correction.reviewed_by = current_user.id
-    correction.review_note = review_note
+    correction.review_note = data.review_note
     correction.reviewed_at = datetime.utcnow()
 
-    if status == "approved":
+    if data.status == "approved":
         student = db.scalar(select(Student).where(Student.id == correction.student_id))
         if student and hasattr(student, correction.field_name):
             setattr(student, correction.field_name, correction.requested_value)

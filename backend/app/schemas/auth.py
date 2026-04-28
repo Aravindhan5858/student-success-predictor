@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from typing import Optional
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
 from app.schemas.user import UserResponse
 from app.models.user import UserRole
 
@@ -12,7 +13,8 @@ def _validate_password_max_bytes(password: str) -> str:
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    """Supports login via email OR register number (student_id)."""
+    identifier: str  # email or register number
     password: str
 
     @field_validator("password")

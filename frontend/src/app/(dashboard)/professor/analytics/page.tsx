@@ -481,9 +481,7 @@ export default function AnalyticsPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() =>
-                          router.push(`/professor/students/${s.id}`)
-                        }
+                        onClick={() => router.push('/professor/students')}
                       >
                         View Profile
                       </Button>

@@ -1,17 +1,36 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 from app.models.user import User
+from app.models.student import Student
 from app.core.security import verify_password, create_access_token, create_refresh_token, verify_token
 from app.schemas.auth import TokenResponse
 from app.schemas.user import UserResponse
 
 
-def authenticate_user(db: Session, email: str, password: str) -> User:
-    user = db.query(User).filter(User.email == email).first()
+def authenticate_user(db: Session, identifier: str, password: str) -> User:
+    """Authenticate by email OR register number (student_id)."""
+    # Try email first
+    user = db.query(User).filter(User.email == identifier).first()
+
+    # If not found by email, try register number
+    if not user:
+        student = db.scalar(
+            select(Student).where(Student.student_id == identifier)
+        )
+        if student:
+            user = db.query(User).filter(User.id == student.user_id).first()
+
     if not user or not verify_password(password, user.hashed_password):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials"
+        )
     if not user.is_active:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Account is inactive"
+        )
     return user
 
 

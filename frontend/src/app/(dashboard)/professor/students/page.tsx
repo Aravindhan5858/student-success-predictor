@@ -6,9 +6,13 @@ import LoadingSpinner from '@/components/shared/LoadingSpinner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import PerformanceChart from '@/components/charts/PerformanceChart';
 import { getRiskColor, formatGrade } from '@/lib/utils';
 import type { Student } from '@/types';
+import { studentsApi } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 function StudentDetailModal({ student, onClose }: { student: Student; onClose: () => void }) {
   const { data: performance, isLoading } = useStudentPerformance(student.id);
@@ -47,13 +51,38 @@ function StudentDetailModal({ student, onClose }: { student: Student; onClose: (
 }
 
 export default function ProfessorStudentsPage() {
+  const { toast } = useToast();
   const [riskFilter, setRiskFilter] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const { data, isLoading } = useStudents({
+  const { data, isLoading, refetch } = useStudents({
     risk_level: riskFilter !== 'all' ? riskFilter : undefined,
     size: 100,
   });
+
+  const saveEdit = async () => {
+    if (!editingStudent) return;
+    setSaving(true);
+    try {
+      await studentsApi.update(editingStudent.id, {
+        department: editingStudent.department,
+        year: editingStudent.year,
+        semester: editingStudent.semester,
+        cgpa: editingStudent.cgpa,
+        attendance_pct: editingStudent.attendance_pct,
+        risk_level: editingStudent.risk_level,
+      });
+      toast({ title: 'Student updated' });
+      setEditingStudent(null);
+      refetch();
+    } catch {
+      toast({ title: 'Failed to update student', variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -80,12 +109,55 @@ export default function ProfessorStudentsPage() {
           <StudentTable
             students={data?.items ?? []}
             onView={(s) => setSelectedStudent(s)}
+            onEdit={(s) => setEditingStudent({ ...s })}
           />
         </div>
       )}
 
       {selectedStudent && (
         <StudentDetailModal student={selectedStudent} onClose={() => setSelectedStudent(null)} />
+      )}
+
+      {editingStudent && (
+        <Dialog open onOpenChange={() => setEditingStudent(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader><DialogTitle>Edit Student</DialogTitle></DialogHeader>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">Department</label>
+                <Input value={editingStudent.department ?? ''} onChange={(e) => setEditingStudent({ ...editingStudent, department: e.target.value })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">Year</label>
+                <Input type="number" value={editingStudent.year ?? 0} onChange={(e) => setEditingStudent({ ...editingStudent, year: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">Semester</label>
+                <Input type="number" value={editingStudent.semester ?? 0} onChange={(e) => setEditingStudent({ ...editingStudent, semester: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">CGPA</label>
+                <Input type="number" step="0.01" value={editingStudent.cgpa ?? 0} onChange={(e) => setEditingStudent({ ...editingStudent, cgpa: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">Attendance %</label>
+                <Input type="number" step="0.1" value={editingStudent.attendance_pct ?? 0} onChange={(e) => setEditingStudent({ ...editingStudent, attendance_pct: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm text-muted-foreground">Risk</label>
+                <Select value={editingStudent.risk_level} onValueChange={(v) => setEditingStudent({ ...editingStudent, risk_level: v as any })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <Button onClick={saveEdit} disabled={saving}>{saving ? 'Saving...' : 'Save Changes'}</Button>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

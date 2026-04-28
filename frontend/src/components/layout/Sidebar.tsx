@@ -10,7 +10,14 @@ import {
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 
-const navItems = {
+const navItems: Record<string, { href: string; label: string; icon: any }[]> = {
+  super_admin: [
+    { href: '/super-admin', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/admin/users', label: 'Users', icon: Users },
+    { href: '/admin/moderation', label: 'Moderation', icon: Shield },
+    { href: '/admin/audit-logs', label: 'Audit Logs', icon: FileText },
+    { href: '/community', label: 'Community Q&A', icon: HelpCircle },
+  ],
   admin: [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/users', label: 'Users', icon: Users },
@@ -22,6 +29,7 @@ const navItems = {
     { href: '/professor', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/professor/upload', label: 'Upload Data', icon: Upload },
     { href: '/professor/students', label: 'Students', icon: GraduationCap },
+    { href: '/professor/interview-drives', label: 'Interview Drives', icon: ClipboardList },
     { href: '/professor/analytics', label: 'Analytics', icon: BarChart2 },
     { href: '/mentorship', label: 'Mentorship', icon: UserCheck },
     { href: '/community', label: 'Community Q&A', icon: HelpCircle },
@@ -29,6 +37,7 @@ const navItems = {
   student: [
     { href: '/student', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/student/assessments', label: 'Assessments', icon: ClipboardList },
+    { href: '/student/mcq-test', label: 'MCQ Tests', icon: Brain },
     { href: '/student/mock-test', label: 'Mock Tests', icon: FlaskConical },
     { href: '/student/interviews', label: 'Interviews', icon: MessageSquare },
     { href: '/student/profile', label: 'Profile', icon: User },

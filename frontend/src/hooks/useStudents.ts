@@ -11,13 +11,13 @@ interface StudentFilters {
 }
 
 export function useStudents(filters?: StudentFilters) {
-  return useQuery<PaginatedResponse<Student>>({
+  return useQuery<PaginatedResponse<Student> & { status_counts?: Record<string, number> }>({
     queryKey: ['students', filters],
     queryFn: () => studentsApi.list(filters),
   });
 }
 
-export function useStudent(id: number | null) {
+export function useStudent(id: string | null) {
   return useQuery<Student>({
     queryKey: ['student', id],
     queryFn: () => studentsApi.getById(id!),
@@ -32,7 +32,7 @@ export function useMyStudent() {
   });
 }
 
-export function useStudentPerformance(id: number | null) {
+export function useStudentPerformance(id: string | null) {
   return useQuery<PerformanceTrend[]>({
     queryKey: ['student-performance', id],
     queryFn: () => studentsApi.getPerformance(id!),

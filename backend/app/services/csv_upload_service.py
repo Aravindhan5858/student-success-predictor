@@ -1,5 +1,6 @@
 import csv
 import io
+import pandas as pd
 from typing import List, Dict
 from fastapi import UploadFile, HTTPException
 from sqlalchemy.orm import Session
@@ -12,22 +13,24 @@ import uuid
 
 
 async def validate_csv(file: UploadFile) -> List[Dict]:
-    if not file.filename.endswith('.csv'):
-        raise HTTPException(status_code=400, detail="File must be CSV")
+    filename = (file.filename or "").lower()
+    if not (filename.endswith(".csv") or filename.endswith(".xlsx")):
+        raise HTTPException(status_code=400, detail="File must be .csv or .xlsx")
 
     content = await file.read()
-    decoded = content.decode('utf-8')
-    reader = csv.DictReader(io.StringIO(decoded))
+    if filename.endswith(".xlsx"):
+        df = pd.read_excel(io.BytesIO(content))
+    else:
+        decoded = content.decode("utf-8", errors="replace")
+        df = pd.read_csv(io.StringIO(decoded))
 
-    required_fields = ['register_number', 'full_name', 'email', 'department', 'year', 'semester']
-    
-    data = []
-    for row in reader:
-        if not all(field in row for field in required_fields):
-            raise HTTPException(status_code=400, detail=f"Missing required fields: {required_fields}")
-        data.append(row)
+    df.columns = [str(c).strip() for c in df.columns]
+    required_fields = ["register_number", "full_name", "email", "department", "year", "semester"]
+    missing = [f for f in required_fields if f not in df.columns]
+    if missing:
+        raise HTTPException(status_code=400, detail={"message": "Missing required fields", "fields": missing})
 
-    return data
+    return df.fillna("").to_dict(orient="records")
 
 
 async def process_student_csv(file: UploadFile, db: Session, professor_id: uuid.UUID):
@@ -37,7 +40,7 @@ async def process_student_csv(file: UploadFile, db: Session, professor_id: uuid.
     updated = 0
     errors = []
 
-    for row in data:
+    for idx, row in enumerate(data, start=2):
         try:
             user = db.scalar(select(User).where(User.email == row['email']))
             
@@ -54,46 +57,39 @@ async def process_student_csv(file: UploadFile, db: Session, professor_id: uuid.
 
                 student = Student(
                     user_id=user.id,
-                    student_id=row['register_number'],
-                    department=row['department'],
+                    student_id=str(row['register_number']).strip(),
+                    department=str(row['department']).strip() or None,
                     year=int(row['year']),
                     semester=int(row['semester']),
-                    cgpa=float(row.get('cgpa', 0.0)),
-                    attendance_pct=float(row.get('attendance', 0.0))
+                    cgpa=float(row.get('cgpa') or 0.0),
+                    attendance_pct=float(row.get('attendance') or 0.0)
                 )
                 db.add(student)
                 created += 1
             else:
                 student = db.scalar(select(Student).where(Student.user_id == user.id))
                 if student:
-                    student.department = row['department']
+                    student.department = str(row['department']).strip() or None
                     student.year = int(row['year'])
                     student.semester = int(row['semester'])
-                    if 'cgpa' in row:
+                    if 'cgpa' in row and str(row['cgpa']).strip() != "":
                         student.cgpa = float(row['cgpa'])
-                    if 'attendance' in row:
+                    if 'attendance' in row and str(row['attendance']).strip() != "":
                         student.attendance_pct = float(row['attendance'])
                     updated += 1
 
-            if 'internal_marks' in row or 'semester_marks' in row:
-                academic = AcademicRecord(
-                    student_id=student.id,
-                    semester=int(row['semester']),
-                    internal_marks=float(row.get('internal_marks', 0)),
-                    semester_marks=float(row.get('semester_marks', 0)),
-                    credits=int(row.get('credits', 0))
-                )
-                db.add(academic)
-
         except Exception as e:
-            errors.append(f"Row {row.get('register_number', 'unknown')}: {str(e)}")
+            reg = row.get("register_number", "unknown")
+            errors.append(f"Row {idx} ({reg}): {str(e)}")
 
     db.commit()
     
     return {
         "created": created,
         "updated": updated,
-        "errors": errors
+        "errors": errors,
+        "total_rows": len(data),
+        "status": "success" if not errors else ("partial" if (created + updated) > 0 else "failed"),
     }
 
 

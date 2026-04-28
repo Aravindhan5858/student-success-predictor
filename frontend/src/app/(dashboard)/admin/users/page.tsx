@@ -26,7 +26,7 @@ export default function UsersPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => usersApi.delete(id),
+    mutationFn: (id: string) => usersApi.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['users'] });
       toast({ title: 'User deleted successfully' });

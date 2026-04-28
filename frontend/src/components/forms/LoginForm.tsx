@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 const schema = z.object({
-  email: z.string().email('Invalid email'),
+  identifier: z.string().min(1, 'Email or Register Number is required'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
@@ -21,11 +21,16 @@ export default function LoginForm() {
   });
 
   return (
-    <form onSubmit={handleSubmit((d) => login(d.email, d.password))} className="space-y-4">
+    <form onSubmit={handleSubmit((d) => login(d.identifier, d.password))} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" type="email" placeholder="you@example.com" {...register('email')} />
-        {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+        <Label htmlFor="identifier">Email or Register Number</Label>
+        <Input
+          id="identifier"
+          type="text"
+          placeholder="you@example.com or CS2021001"
+          {...register('identifier')}
+        />
+        {errors.identifier && <p className="text-xs text-destructive">{errors.identifier.message}</p>}
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>

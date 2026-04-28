@@ -60,7 +60,7 @@ export default function AdminDashboard() {
   const { data: logsData } = useQuery<AuditLogsResponse>({
     queryKey: ["audit-logs-recent"],
     queryFn: async () => {
-      const { data } = await api.get("/audit-logs", {
+      const { data } = await api.get("/analytics/audit-logs", {
         params: { page: 1, size: 5 },
       });
       return data;

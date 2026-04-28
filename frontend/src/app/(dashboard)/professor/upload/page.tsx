@@ -1,6 +1,6 @@
 'use client';
 import { useQuery } from '@tanstack/react-query';
-import { academicApi } from '@/lib/api';
+import { academicApi, professorAPI } from '@/lib/api';
 import CSVUploadForm from '@/components/forms/CSVUploadForm';
 import DataTable, { Column } from '@/components/tables/DataTable';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,7 @@ export default function UploadPage() {
 
   const columns: Column<UploadHistory>[] = [
     { key: 'filename', header: 'File Name', render: (h) => <span className="font-medium">{h.filename}</span> },
-    { key: 'records_count', header: 'Records', render: (h) => h.records_count.toLocaleString() },
+    { key: 'records_count', header: 'Records', render: (h) => (h.records_count ?? 0).toLocaleString() },
     {
       key: 'status',
       header: 'Status',
@@ -28,6 +28,27 @@ export default function UploadPage() {
     },
     { key: 'uploaded_at', header: 'Uploaded At', render: (h) => formatDateTime(h.uploaded_at) },
   ];
+
+  const downloadTemplate = async () => {
+    const res = await professorAPI.downloadAcademicTemplate();
+    const blob = new Blob([res.data], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'academic_template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const historyRows = Array.isArray(history?.items)
+    ? history.items.map((r: any) => ({
+      id: r.id,
+      filename: r.file_url,
+      records_count: (r.report_json?.saved ?? 0),
+      status: r.status,
+      uploaded_at: r.created_at,
+    }))
+    : [];
 
   return (
     <div className="space-y-6">
@@ -41,6 +62,9 @@ export default function UploadPage() {
         <p className="text-sm text-muted-foreground mb-4">
           Upload a CSV or Excel file with columns: student_id, course_id, semester, marks, grade, attendance
         </p>
+        <button type="button" className="text-sm text-primary underline mb-4" onClick={downloadTemplate}>
+          Download standard template
+        </button>
         <CSVUploadForm onSuccess={() => refetch()} />
       </div>
 
@@ -48,7 +72,7 @@ export default function UploadPage() {
         <h3 className="font-semibold mb-4">Upload History</h3>
         {isLoading ? <LoadingSpinner /> : (
           <DataTable<UploadHistory>
-            data={history ?? []}
+            data={historyRows}
             columns={columns}
             searchable={false}
           />

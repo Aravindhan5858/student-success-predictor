@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Github, Linkedin, Globe, Upload, Plus, X, FileText, ChevronDown, ChevronUp, Pencil, Trash2 } from 'lucide-react';
-import api from '@/lib/api';
+import { Github, Linkedin, Globe, Upload, Plus, X, FileText, ChevronDown, ChevronUp, Pencil, Trash2, Copy, ExternalLink } from 'lucide-react';
+import api, { profileApi } from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -62,6 +62,14 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [resumeUrl, setResumeUrl] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [resumeScore, setResumeScore] = useState<number | null>(null);
+  const [resumeStatus, setResumeStatus] = useState<'not_started' | 'processing' | 'completed' | 'failed'>('not_started');
+  const [resumeSummary, setResumeSummary] = useState<string>('');
+  const [resumeAnalyzedAt, setResumeAnalyzedAt] = useState<string>('');
+  const [publicSlug, setPublicSlug] = useState('');
+  const [isPublic, setIsPublic] = useState(false);
+  const [togglingPublic, setTogglingPublic] = useState(false);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [allSkills, setAllSkills] = useState<{ id: number; name: string }[]>([]);
   const [skillDialog, setSkillDialog] = useState(false);
@@ -87,7 +95,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     Promise.all([
-      api.get('/profile').then((r) => r.data),
+      profileApi.get(),
       api.get('/skills').then((r) => r.data),
     ]).then(([profile, skillsData]) => {
       reset({
@@ -99,6 +107,12 @@ export default function ProfilePage() {
         portfolio: profile.portfolio ?? '',
       });
       setResumeUrl(profile.resume_url ?? '');
+      setResumeScore(profile.resume_score ?? null);
+      setResumeStatus(profile.resume_analysis_status ?? 'not_started');
+      setResumeSummary(profile.resume_analysis_summary ?? '');
+      setResumeAnalyzedAt(profile.resume_analyzed_at ?? '');
+      setPublicSlug(profile.public_slug ?? '');
+      setIsPublic(!!profile.is_public);
       setSkills(profile.skills ?? []);
       setAllSkills(skillsData);
       setEducation(profile.education ?? []);
@@ -112,7 +126,7 @@ export default function ProfilePage() {
   const onSave = handleSubmit(async (data) => {
     setSaving(true);
     try {
-      await api.put('/profile', { ...data, skills, education, experience, projects, certifications });
+      await profileApi.update({ ...data, skills, education, experience, projects, certifications });
       toast({ title: 'Profile saved' });
     } catch {
       toast({ title: 'Failed to save profile', variant: 'destructive' });
@@ -126,15 +140,57 @@ export default function ProfilePage() {
     if (!file) return;
     setUploading(true);
     try {
-      const form = new FormData();
-      form.append('file', file);
-      const { data } = await api.post('/profile/resume', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const data = await profileApi.uploadResume(file);
       setResumeUrl(data.resume_url);
+      setResumeStatus(data.resume_analysis_status ?? 'not_started');
+      setResumeScore(data.resume_score ?? null);
+      setResumeSummary(data.resume_analysis_summary ?? '');
+      setResumeAnalyzedAt(data.resume_analyzed_at ?? '');
       toast({ title: 'Resume uploaded' });
     } catch {
       toast({ title: 'Failed to upload resume', variant: 'destructive' });
     } finally {
       setUploading(false);
+    }
+  };
+
+  const analyzeResume = async () => {
+    setAnalyzing(true);
+    try {
+      const data = await profileApi.analyzeResume();
+      setResumeStatus(data.resume_analysis_status ?? 'completed');
+      setResumeScore(data.resume_score ?? null);
+      setResumeSummary(data.resume_analysis_summary ?? '');
+      setResumeAnalyzedAt(data.resume_analyzed_at ?? '');
+      toast({ title: 'Resume analyzed successfully' });
+    } catch {
+      toast({ title: 'Resume analysis failed', variant: 'destructive' });
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  const handlePublicToggle = async (next: boolean) => {
+    setTogglingPublic(true);
+    try {
+      const data = await profileApi.setPublicVisibility(next);
+      setIsPublic(!!data.is_public);
+      setPublicSlug(data.public_slug ?? '');
+      toast({ title: next ? 'Public profile enabled' : 'Public profile disabled' });
+    } catch {
+      toast({ title: 'Failed to update public visibility', variant: 'destructive' });
+    } finally {
+      setTogglingPublic(false);
+    }
+  };
+
+  const regeneratePublicSlug = async () => {
+    try {
+      const data = await profileApi.regeneratePublicSlug();
+      setPublicSlug(data.public_slug ?? '');
+      toast({ title: 'Public link regenerated' });
+    } catch {
+      toast({ title: 'Failed to regenerate public link', variant: 'destructive' });
     }
   };
 
@@ -171,6 +227,7 @@ export default function ProfilePage() {
   }
 
   if (loading) return <LoadingSpinner />;
+  const publicUrl = publicSlug ? `${window.location.origin}/u/${publicSlug}` : '';
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -223,6 +280,30 @@ export default function ProfilePage() {
             <Label className="flex items-center gap-2"><Globe className="h-4 w-4" /> Portfolio</Label>
             <Input {...register('portfolio')} placeholder="https://yourportfolio.com" />
           </div>
+          <div className="border-t pt-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Public Profile</Label>
+              <Button type="button" variant={isPublic ? 'default' : 'outline'} size="sm" disabled={togglingPublic} onClick={() => handlePublicToggle(!isPublic)}>
+                {isPublic ? 'Public: ON' : 'Public: OFF'}
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Input value={publicUrl} readOnly placeholder="Public link will appear here" />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                disabled={!publicUrl}
+                onClick={() => navigator.clipboard.writeText(publicUrl)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="icon" disabled={!publicUrl} onClick={() => window.open(publicUrl, '_blank')}>
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+              <Button type="button" variant="outline" size="sm" onClick={regeneratePublicSlug}>Regenerate</Button>
+            </div>
+          </div>
         </div>
 
         {/* Resume */}
@@ -243,6 +324,17 @@ export default function ProfilePage() {
             </Button>
           )}
           <input ref={fileRef} type="file" accept=".pdf,.doc,.docx" className="hidden" onChange={handleResumeUpload} />
+          <div className="space-y-2 pt-2">
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="secondary" size="sm" disabled={!resumeUrl || analyzing} onClick={analyzeResume}>
+                {analyzing ? 'Analyzing...' : 'Analyze Resume'}
+              </Button>
+              <Badge variant="outline">{resumeStatus.replace('_', ' ')}</Badge>
+              {resumeScore !== null && <Badge>{resumeScore.toFixed(0)}/100</Badge>}
+            </div>
+            {resumeSummary && <p className="text-sm text-muted-foreground">{resumeSummary}</p>}
+            {resumeAnalyzedAt && <p className="text-xs text-muted-foreground">Last analyzed: {new Date(resumeAnalyzedAt).toLocaleString()}</p>}
+          </div>
         </div>
 
         {/* Skills */}

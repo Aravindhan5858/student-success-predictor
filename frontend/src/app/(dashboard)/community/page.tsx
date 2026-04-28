@@ -30,6 +30,16 @@ interface PaginatedQuestions {
   pages: number;
 }
 
+type QuestionApi = {
+  id: string;
+  title: string;
+  body: string;
+  tags?: string[] | null;
+  votes?: number;
+  status?: string;
+  created_at: string;
+};
+
 const POPULAR_TAGS = ['python', 'javascript', 'algorithms', 'career', 'interview', 'ml'];
 
 const AVATAR_COLORS = [
@@ -56,11 +66,30 @@ export default function CommunityPage() {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({ title: '', body: '', tags: '' });
 
+  const normalizeQuestion = (raw: QuestionApi): Question => ({
+    id: raw.id,
+    title: raw.title,
+    body: raw.body,
+    tags: Array.isArray(raw.tags) ? raw.tags : [],
+    vote_count: raw.votes ?? 0,
+    answer_count: 0, // list endpoint does not currently return counts
+    is_closed: raw.status === 'closed',
+    author: { full_name: 'Community User' }, // backend currently returns author_id only
+    created_at: raw.created_at,
+  });
+
   const fetchQuestions = async (q = search, tag = activeTag, p = page) => {
     setLoading(true);
     try {
-      const { data: res } = await api.get('/questions', { params: { q, tag, page: p, size: 10 } });
-      setData(res);
+      const { data: res } = await api.get<QuestionApi[] | PaginatedQuestions>('/questions', { params: { q, tag, page: p, size: 10 } });
+      const list = Array.isArray(res) ? res : (res.items ?? []);
+      const items = list.map(normalizeQuestion);
+      setData({
+        items,
+        total: Array.isArray(res) ? items.length : (res.total ?? items.length),
+        page: Array.isArray(res) ? 1 : (res.page ?? 1),
+        pages: Array.isArray(res) ? 1 : (res.pages ?? 1),
+      });
     } catch {
       toast({ title: 'Failed to load questions', variant: 'destructive' });
     } finally {
@@ -95,6 +124,7 @@ export default function CommunityPage() {
       toast({ title: 'Question posted' });
       setAskOpen(false);
       setForm({ title: '', body: '', tags: '' });
+      setPage(1);
       fetchQuestions(search, activeTag, 1);
     } catch {
       toast({ title: 'Failed to post question', variant: 'destructive' });
